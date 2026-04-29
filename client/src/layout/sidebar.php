@@ -52,14 +52,14 @@
     background: var(--dark-green);
     color: var(--white);
     box-sizing: border-box;
-    padding: 7px;
+    padding: 7px 0;
     font-family: var(--font-main);
     display: flex;
     flex-direction: column;
     align-items: stretch;
     flex: 1;
     min-height: 0;
-    width: 220px;
+    width: 12.5%;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
@@ -91,7 +91,7 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    padding-top: 2rem;
+    padding-top: 1rem;
   }
 
   .sidebar-nav-list {
@@ -115,16 +115,16 @@
      =============================== */
   .sidebar-button {
     width: 100%;
-    height: 60px;
+    height: 55px;
     display: flex;
     align-items: center;
-    gap: .52rem;
-    padding: 0 1.2rem;
+    gap: 1rem;
+    padding: 0 1.5rem;
     background: transparent;
     border: none;
     color: rgba(255, 255, 255, 0.9);
     font-family: var(--font-main);
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     font-weight: 400;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -133,7 +133,7 @@
     border-radius: 0 8px 8px 0;
     box-sizing: border-box;
     outline: none;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
   }
 
   .sidebar-button:hover {
@@ -149,16 +149,16 @@
     background-color: rgba(255, 255, 255, 0.12);
     border-left-color: var(--white);
     color: var(--white);
-    font-weight: 700;
+    font-weight: 600;
   }
 
   /* ===============================
      SIDEBAR ICON
      =============================== */
   .sidebar-icon {
-    width: 24px;
-    height: 24px;
-    min-width: 24px;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -189,39 +189,38 @@
      =============================== */
   @media (max-width: 1024px) {
     .app-sidebar {
-      width: 200px;
+      width: 12.5%;
     }
 
     .sidebar-button {
       height: 50px;
-      padding: 0.6rem 0.7rem;
-      font-size: 0.7rem;
-      margin-top: 12px;
+      padding: 0 1.2rem;
+      font-size: 0.85rem;
+      gap: 0.8rem;
     }
 
     .sidebar-icon {
-      width: 35px;
-      height: 35px;
+      width: 12.5%;
+      height: 20px;
     }
   }
 
   @media (max-width: 768px) {
     .app-sidebar {
-      width: 180px;
-      padding: 5px;
+      width: 12.5%;
     }
 
     .sidebar-button {
       height: 48px;
-      padding: 0.6rem 0.7rem;
-      gap: 0.6rem;
-      font-size: 0.65rem;
-      margin-top: 10px;
+      padding: 0 1rem;
+      gap: 0.7rem;
+      font-size: 0.8rem;
+      margin-bottom: 5px;
     }
 
     .sidebar-icon {
-      width: 32px;
-      height: 32px;
+      width: 18px;
+      height: 18px;
     }
   }
 

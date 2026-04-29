@@ -59,7 +59,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.2rem 0.3rem;
+    padding: 0.2rem 0.32rem;
     box-sizing: border-box;
     box-shadow: 0 4px 7px var(--shadow-color);
     z-index: 10;
@@ -73,7 +73,7 @@
   .header-branding {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0;
   }
 
   .header-logo {
@@ -89,7 +89,7 @@
   .header-title {
     font-weight: 800;
     font-size: 1.3rem;
-    letter-spacing: 1.5px;
+    color: var(--dark-green);
     font-family: var(--font-main);
   }
 
@@ -107,7 +107,7 @@
     color: var(--dark-green);
     font-weight: 600;
     font-family: var(--font-main);
-    font-size: 0.95rem;
+    font-size: 0.79rem;
     margin-right: 1px;
   }
 
@@ -134,8 +134,8 @@
   }
 
   .logout-icon-img {
-    width: 50px;
-    height: 50px;
+    width: 20px;
+    height: 20px;
     display: block;
   }
 
