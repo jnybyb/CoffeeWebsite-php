@@ -10,19 +10,15 @@
 
 <body>
   <!-- Header Component -->
-  <?php include 'header.php'; ?>
+  <?php include 'Header.php'; ?>
 
   <!-- Main Layout Container -->
   <div class="app-container">
     <!-- Sidebar Component -->
-    <?php include 'sidebar.php'; ?>
+    <?php include 'Sidebar.php'; ?>
 
     <!-- Main Content Area -->
-    <main class="app-main-content">
-      <div class="content-placeholder">
-        <p>Page content will be loaded here</p>
-      </div>
-    </main>
+    <?php include 'MainContent.php'; ?>
   </div>
 
   <style>
@@ -78,8 +74,8 @@
     .app-main-content {
       flex: 1;
       overflow-y: auto;
-      padding: 1.5rem;
-      background-color: var(--light-gray);
+      padding: 0;
+      background-color: var(--white);
     }
 
     .content-placeholder {

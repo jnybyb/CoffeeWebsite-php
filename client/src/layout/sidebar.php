@@ -57,9 +57,9 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    flex: 1;
+    flex: 0 0 220px;
     min-height: 0;
-    width: 12.5%;
+    width: 220px;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
@@ -102,7 +102,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0;
+    gap: 10px;
   }
 
   .sidebar-nav-item {
@@ -114,26 +114,27 @@
      SIDEBAR BUTTONS
      =============================== */
   .sidebar-button {
-    width: 100%;
+    width: 94%;
     height: 55px;
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0 1.5rem;
+    gap: .72rem;
+    padding: 0 1.3rem;
     background: transparent;
     border: none;
     color: rgba(255, 255, 255, 0.9);
     font-family: var(--font-main);
-    font-size: 0.75rem;
-    font-weight: 400;
+    font-size: 0.8rem;
+    font-weight: 300;
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
     border-left: 4px solid transparent;
-    border-radius: 0 8px 8px 0;
+    border-radius: 8px 0 0 8px;
     box-sizing: border-box;
     outline: none;
     margin-bottom: 8px;
+    margin-left: 4%;
   }
 
   .sidebar-button:hover {
@@ -149,7 +150,9 @@
     background-color: rgba(255, 255, 255, 0.12);
     border-left-color: var(--white);
     color: var(--white);
-    font-weight: 600;
+    font-weight: 700;
+    margin-left: 0;
+    width: 100%;
   }
 
   /* ===============================
@@ -189,7 +192,8 @@
      =============================== */
   @media (max-width: 1024px) {
     .app-sidebar {
-      width: 12.5%;
+      width: 20px;
+      flex: 0 0 20px;
     }
 
     .sidebar-button {
@@ -207,7 +211,8 @@
 
   @media (max-width: 768px) {
     .app-sidebar {
-      width: 12.5%;
+      width: 20px;
+      flex: 0 0 20px;
     }
 
     .sidebar-button {
