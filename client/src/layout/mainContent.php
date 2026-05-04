@@ -2,38 +2,7 @@
 <main class="app-main-content">
   <!-- Dashboard Page -->
   <section class="page-section active" data-page="dashboard">
-    <div class="page-header">
-      <h1>Dashboard</h1>
-      <p class="page-subtitle">Overview of your coffee farm monitoring system</p>
-    </div>
-    <div class="page-content">
-      <div class="dashboard-grid">
-        <div class="card">
-          <div class="card-icon">📊</div>
-          <h3>Total Farm Plots</h3>
-          <p class="card-value">24</p>
-          <p class="card-description">Active monitoring plots</p>
-        </div>
-        <div class="card">
-          <div class="card-icon">👥</div>
-          <h3>Beneficiaries</h3>
-          <p class="card-value">156</p>
-          <p class="card-description">Registered farmers</p>
-        </div>
-        <div class="card">
-          <div class="card-icon">🌱</div>
-          <h3>Seedlings</h3>
-          <p class="card-value">3,240</p>
-          <p class="card-description">Total seedlings tracked</p>
-        </div>
-        <div class="card">
-          <div class="card-icon">🌾</div>
-          <h3>Crop Status</h3>
-          <p class="card-value">92%</p>
-          <p class="card-description">Healthy crops</p>
-        </div>
-      </div>
-    </div>
+    <?php include '../pages/Dashboard.php'; ?>
   </section>
 
   <!-- Farm Monitoring Page -->
