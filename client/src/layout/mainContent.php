@@ -7,42 +7,7 @@
 
   <!-- Farm Monitoring Page -->
   <section class="page-section" data-page="farm-monitoring">
-    <div class="page-header">
-      <h1>Farm Monitoring</h1>
-      <p class="page-subtitle">Real-time monitoring of your farm plots</p>
-    </div>
-    <div class="page-content">
-      <div class="filter-section">
-        <button class="filter-btn active">All Plots</button>
-        <button class="filter-btn">Healthy</button>
-        <button class="filter-btn">Needs Attention</button>
-        <button class="filter-btn">Critical</button>
-      </div>
-      <div class="farm-plots-list">
-        <div class="plot-card">
-          <div class="plot-header">
-            <h3>Plot #001 - Zone A</h3>
-            <span class="status-badge healthy">Healthy</span>
-          </div>
-          <div class="plot-details">
-            <p><strong>Location:</strong> Davao Oriental - Barangay X</p>
-            <p><strong>Area:</strong> 2.5 hectares</p>
-            <p><strong>Last Updated:</strong> Today, 2:30 PM</p>
-          </div>
-        </div>
-        <div class="plot-card">
-          <div class="plot-header">
-            <h3>Plot #002 - Zone B</h3>
-            <span class="status-badge needs-attention">Needs Attention</span>
-          </div>
-          <div class="plot-details">
-            <p><strong>Location:</strong> Davao Oriental - Barangay Y</p>
-            <p><strong>Area:</strong> 1.8 hectares</p>
-            <p><strong>Last Updated:</strong> Today, 2:15 PM</p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <?php include '../pages/FarmMonitoring.php'; ?>
   </section>
 
   <!-- Coffee Beneficiaries Page -->
@@ -52,56 +17,7 @@
 
   <!-- Reports Page -->
   <section class="page-section" data-page="reports">
-    <div class="page-header">
-      <h1>Reports</h1>
-      <p class="page-subtitle">Generate and view analytics reports</p>
-    </div>
-    <div class="page-content">
-      <div class="report-filters">
-        <select class="filter-select">
-          <option>Select Report Type</option>
-          <option>Production Report</option>
-          <option>Crop Health Report</option>
-          <option>Beneficiary Report</option>
-          <option>Regional Report</option>
-        </select>
-        <select class="filter-select">
-          <option>Select Period</option>
-          <option>Last 7 Days</option>
-          <option>Last 30 Days</option>
-          <option>Last 3 Months</option>
-          <option>Last 6 Months</option>
-          <option>Last Year</option>
-        </select>
-        <button class="btn btn-primary">Generate Report</button>
-        <button class="btn btn-secondary">Download PDF</button>
-      </div>
-      <div class="report-container">
-        <div class="report-item">
-          <h3>Production Report - Last 30 Days</h3>
-          <div class="report-chart-placeholder">
-            <p>📈 Chart visualization will appear here</p>
-          </div>
-        </div>
-        <div class="report-item">
-          <h3>Crop Health Summary</h3>
-          <div class="report-stats">
-            <div class="stat">
-              <p>Healthy</p>
-              <p class="stat-value">92%</p>
-            </div>
-            <div class="stat">
-              <p>At Risk</p>
-              <p class="stat-value">6%</p>
-            </div>
-            <div class="stat">
-              <p>Critical</p>
-              <p class="stat-value">2%</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <?php include '../pages/Reports.php'; ?>
   </section>
 </main>
 
@@ -398,83 +314,6 @@
     transform: scale(1.2);
   }
 
-  /* ===============================
-     REPORTS
-     =============================== */
-  .report-filters {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-  .filter-select {
-    padding: 0.75rem 1rem;
-    border: 1px solid var(--border-gray);
-    border-radius: 6px;
-    font-size: 0.9rem;
-    font-family: var(--font-main);
-    background-color: var(--white);
-    cursor: pointer;
-  }
-
-  .filter-select:focus {
-    outline: none;
-    border-color: var(--dark-green);
-    box-shadow: 0 0 0 3px rgba(5, 80, 53, 0.1);
-  }
-
-  .report-container {
-    display: grid;
-    gap: 2rem;
-  }
-
-  .report-item {
-    background: var(--white);
-    border: 1px solid var(--border-gray);
-    border-radius: 8px;
-    padding: 1.5rem;
-  }
-
-  .report-item h3 {
-    color: var(--dark-green);
-    margin-top: 0;
-    margin-bottom: 1rem;
-  }
-
-  .report-chart-placeholder {
-    background-color: var(--light-gray);
-    border: 2px dashed var(--border-gray);
-    border-radius: 6px;
-    padding: 3rem;
-    text-align: center;
-    color: #999;
-  }
-
-  .report-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
-  }
-
-  .stat {
-    background-color: var(--light-gray);
-    padding: 1rem;
-    border-radius: 6px;
-    text-align: center;
-  }
-
-  .stat p {
-    margin: 0.5rem 0;
-    color: #666;
-  }
-
-  .stat-value {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--dark-green);
-  }
 
   /* ===============================
      RESPONSIVE DESIGN
@@ -511,13 +350,6 @@
       padding: 0.75rem;
     }
 
-    .report-filters {
-      flex-direction: column;
-    }
-
-    .filter-select {
-      width: 100%;
-    }
   }
 </style>
 
