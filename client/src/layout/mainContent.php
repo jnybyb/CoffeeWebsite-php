@@ -31,7 +31,9 @@
   }
 
   .page-section.active {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
   }
 
   @keyframes fadeIn {

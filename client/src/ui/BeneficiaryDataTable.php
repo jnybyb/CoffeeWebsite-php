@@ -46,21 +46,18 @@
 
       <!-- Empty State -->
       <div class="data-table-empty <?php echo $totalRecords > 0 ? 'hidden' : ''; ?>" id="emptyState">
-        <div class="data-table-empty-icon">
-          <img src="../../assets/icons/no-data.png" alt="No Data Found" />
-        </div>
-        <div class="data-table-empty-title">No data Available</div>
-        <div class="data-table-empty-message">There are no records to display.</div>
+        <?php
+          $noDataType = 'generic';
+          $noDataIcon = '<img src="../../assets/icons/no-data.png" alt="No Data Found" style="width: 45px; height: auto; opacity: 0.6;" />';
+          $noDataTitle = 'No data Available';
+          $noDataSubtitle = 'There are no records to display.';
+          include '../ui/NoDataDisplay.php';
+        ?>
       </div>
 
-      <!-- Pagination -->
-      <?php if ($totalRecords > 0): ?>
-      <?php 
-        $pageSize = 5;
-        $currentPage = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-        include '../ui/Pagination.php'; 
-      ?>
-      <?php endif; ?>
+      <!-- Client-Side Pagination Container -->
+      <div id="paginationContainer"></div>
+      <?php include '../ui/Pagination.php'; ?>
     </div>
   </div>
 
@@ -220,8 +217,8 @@
     display: flex;
     flex-direction: column;
     background-color: var(--white);
-    border-radius: 5px;
-    box-shadow: 0 2px 4px var(--shadow-color);
+    border-radius: 0;
+    box-shadow: none;
     overflow: hidden;
     min-height: 0;
   }

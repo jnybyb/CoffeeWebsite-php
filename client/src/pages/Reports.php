@@ -92,7 +92,7 @@
     <div class="reports-inner-container">
       <!-- Tabs Section -->
       <div style="padding: 1rem 1rem 0 1rem; border-bottom: 1px solid var(--border-gray, #e6e6e6);">
-        <?php include __DIR__ . '/../ui/TableTabs.php'; ?>
+        <?php include __DIR__ . '/../ui/ReportTableTabs.php'; ?>
       </div>
       
       <!-- Table Area -->
@@ -101,7 +101,7 @@
         // $activeTab = null; // Test "No Tab Selected" state
         // $loadingData = false;
         // $reportData = [];
-        include __DIR__ . '/../ui/ListTable.php'; 
+        include __DIR__ . '/../ui/ReportListTable.php'; 
       ?>
     </div>
   </div>

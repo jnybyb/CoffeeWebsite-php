@@ -50,36 +50,245 @@
   <div class="page-subtitle">View and manage coffee farmer beneficiaries</div>
 </div>
 
-<?php include '../ui/DataTable.php'; ?>
+<?php include '../ui/BeneficiaryDataTable.php'; ?>
 
 <script>
+  const API_BASE_URL = 'http://localhost:5000/api';
+  window.beneficiariesData = {}; // Full cache for details
+  window.allFetchedBeneficiaries = []; // Backup of original array
+  window.currentBeneficiaries = []; // Active array (filtered)
+  window.currentPage = 1;
+  window.pageSize = 13;
+
   /**
-   * Filter table rows based on search input
+   * Fetch beneficiaries data from backend API
+   */
+  async function loadBeneficiaries() {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      window.location.href = '../../login.php';
+      return;
+    }
+
+    const loadingState = document.getElementById('loadingState');
+    const tableContent = document.getElementById('tableContent');
+    const emptyState = document.getElementById('emptyState');
+    const dataTableWrapper = document.querySelector('.data-table-wrapper');
+
+    // Show loading state
+    loadingState.classList.remove('hidden');
+    tableContent.classList.add('hidden');
+    emptyState.classList.add('hidden');
+    dataTableWrapper.classList.remove('no-data');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/beneficiaries`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      // Handle unauthorized or expired token
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('authToken');
+        window.location.href = '../../login.php';
+        return;
+      }
+
+      if (!response.ok) throw new Error('Failed to fetch data');
+
+      let beneficiaries = await response.json();
+      loadingState.classList.add('hidden');
+
+      // If backend wraps array in an object (e.g. { data: [...] } or { beneficiaries: [...] })
+      if (beneficiaries && !Array.isArray(beneficiaries)) {
+        if (Array.isArray(beneficiaries.data)) {
+          beneficiaries = beneficiaries.data;
+        } else if (Array.isArray(beneficiaries.beneficiaries)) {
+          beneficiaries = beneficiaries.beneficiaries;
+        } else {
+          console.warn('API returned unexpected format:', beneficiaries);
+          beneficiaries = []; // fallback
+        }
+      }
+
+      // Populate caches
+      window.allFetchedBeneficiaries = beneficiaries || [];
+      window.currentBeneficiaries = [...window.allFetchedBeneficiaries];
+      
+      // Cache data for detail panel keyed by ID
+      window.allFetchedBeneficiaries.forEach(ben => {
+        const idStr = ben.beneficiaryId || ben._id || 'N/A';
+        window.beneficiariesData[idStr] = ben;
+      });
+
+      if (window.currentBeneficiaries.length === 0) {
+        emptyState.classList.remove('hidden');
+        dataTableWrapper.classList.add('no-data');
+        document.getElementById('paginationContainer').innerHTML = '';
+      } else {
+        tableContent.classList.remove('hidden');
+        renderTablePage(1);
+      }
+    } catch (error) {
+      console.error('Error fetching beneficiaries:', error);
+      loadingState.classList.add('hidden');
+      emptyState.classList.remove('hidden');
+      dataTableWrapper.classList.add('no-data');
+      document.getElementById('paginationContainer').innerHTML = '';
+      
+      const emptyMsg = emptyState.querySelector('p, .data-table-empty-message');
+      if (emptyMsg) emptyMsg.textContent = 'Error loading data. Make sure backend is running.';
+    }
+  }
+
+  /**
+   * Navigate to specific page and re-render table and pagination
+   */
+  function renderTablePage(page) {
+    const totalRecords = window.currentBeneficiaries.length;
+    const totalPages = Math.max(1, Math.ceil(totalRecords / window.pageSize));
+    window.currentPage = Math.min(Math.max(1, page), totalPages);
+
+    const start = (window.currentPage - 1) * window.pageSize;
+    const end = start + window.pageSize;
+    const pageData = window.currentBeneficiaries.slice(start, end);
+
+    const tableBody = document.getElementById('tableBody');
+    renderTableRows(pageData, tableBody);
+    renderPaginationControls();
+  }
+
+  /**
+   * Render table rows dynamically from sliced data
+   */
+  function renderTableRows(beneficiaries, tableBody) {
+    tableBody.innerHTML = '';
+    
+    beneficiaries.forEach(ben => {
+      const idStr = ben.beneficiaryId || ben._id || 'N/A';
+      
+      const fullName = `${ben.firstName || ''} ${ben.lastName || ''}`.trim();
+      const address = [ben.purok, ben.barangay, ben.municipality].filter(Boolean).join(', ') || 'Unknown';
+      const farmCount = ben.farms ? ben.farms.length : 0;
+      const totalSeedlings = ben.totalSeedlings || 0;
+
+      const initial = fullName.charAt(0).toUpperCase() || '?';
+      const avatarHtml = ben.picture 
+        ? `<img src="${ben.picture}" alt="${fullName}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">`
+        : `<div style="width:24px;height:24px;border-radius:50%;background:#e8f5e8;color:var(--dark-green);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;">${initial}</div>`;
+
+      const row = document.createElement('div');
+      row.className = 'data-table-row';
+      row.onclick = () => selectRow(row, idStr);
+      
+      row.innerHTML = `
+        <div class="data-table-cell">${idStr}</div>
+        <div class="data-table-cell">
+          <div class="data-table-cell-avatar">
+            ${avatarHtml}
+            <span>${fullName}</span>
+          </div>
+        </div>
+        <div class="data-table-cell">${address}</div>
+        <div class="data-table-cell" style="justify-content: center;">${farmCount}</div>
+        <div class="data-table-cell" style="justify-content: center;">${totalSeedlings}</div>
+      `;
+      
+      tableBody.appendChild(row);
+    });
+  }
+
+  /**
+   * Generate pagination buttons identically to Pagination.php
+   */
+  function renderPaginationControls() {
+    const container = document.getElementById('paginationContainer');
+    const totalRecords = window.currentBeneficiaries.length;
+    
+    if (totalRecords === 0) {
+      container.innerHTML = '';
+      return;
+    }
+
+    const totalPages = Math.max(1, Math.ceil(totalRecords / window.pageSize));
+    const start = totalRecords === 0 ? 0 : (window.currentPage - 1) * window.pageSize + 1;
+    const end = Math.min(totalRecords, window.currentPage * window.pageSize);
+
+    // Pagination algorithm matches PHP version exactly
+    let pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1, 2);
+      if (window.currentPage <= 3) {
+        pages.push(3);
+        if (window.currentPage === 3) pages.push(4);
+        pages.push('...', totalPages - 1, totalPages);
+      } else if (window.currentPage >= totalPages - 2) {
+        pages.push('...');
+        if (window.currentPage === totalPages - 2) {
+          pages.push(totalPages - 3, totalPages - 2);
+        } else {
+          pages.push(totalPages - 2);
+        }
+        pages.push(totalPages - 1, totalPages);
+      } else {
+        pages.push('...', window.currentPage - 1, window.currentPage, window.currentPage + 1, '...', totalPages - 1, totalPages);
+      }
+    }
+
+    let buttonsHtml = pages.map(p => {
+      if (p === '...') return `<span class="pagination-ellipsis">…</span>`;
+      return `<button type="button" class="pagination-btn ${p === window.currentPage ? 'pagination-btn-active' : ''}" onclick="renderTablePage(${p})" ${p === window.currentPage ? 'aria-current="page"' : ''}>${p}</button>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="pagination-container">
+        <div class="pagination-left">
+          Items ${start}-${end} of ${totalRecords} entries
+        </div>
+        <div class="pagination-right">
+          <div class="pagination-pager">
+            <button type="button" class="pagination-btn pagination-btn-nav ${window.currentPage === 1 ? 'pagination-btn-disabled' : ''}" onclick="renderTablePage(${window.currentPage - 1})" ${window.currentPage === 1 ? 'disabled' : ''} aria-label="Previous page">‹</button>
+            ${buttonsHtml}
+            <button type="button" class="pagination-btn pagination-btn-nav ${window.currentPage === totalPages ? 'pagination-btn-disabled' : ''}" onclick="renderTablePage(${window.currentPage + 1})" ${window.currentPage === totalPages ? 'disabled' : ''} aria-label="Next page">›</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Filter backing array instead of DOM elements
    */
   function filterTable() {
     const searchInput = document.getElementById('searchInput');
-    if (!searchInput) return;
-    const searchTerm = searchInput.value.toLowerCase();
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
-    const rows = document.querySelectorAll('.data-table-row');
-    let visibleRows = 0;
+    if (!searchTerm) {
+      window.currentBeneficiaries = [...window.allFetchedBeneficiaries];
+    } else {
+      window.currentBeneficiaries = window.allFetchedBeneficiaries.filter(ben => {
+        const idStr = String(ben.beneficiaryId || ben._id || '').toLowerCase();
+        const fullName = `${ben.firstName || ''} ${ben.lastName || ''}`.toLowerCase();
+        const address = String([ben.purok, ben.barangay, ben.municipality].filter(Boolean).join(' ')).toLowerCase();
+        return idStr.includes(searchTerm) || fullName.includes(searchTerm) || address.includes(searchTerm);
+      });
+    }
 
-    rows.forEach(row => {
-      const text = row.textContent.toLowerCase();
-      if (text.includes(searchTerm)) {
-        row.style.display = '';
-        visibleRows++;
-      } else {
-        row.style.display = 'none';
-      }
-    });
-
-    // Show empty state if no rows visible
     const emptyState = document.getElementById('emptyState');
-    if (visibleRows === 0 && searchTerm.length > 0) {
+    const dataTableWrapper = document.querySelector('.data-table-wrapper');
+    const tableContent = document.getElementById('tableContent');
+
+    if (window.currentBeneficiaries.length === 0) {
       emptyState.classList.remove('hidden');
+      tableContent.classList.add('hidden');
+      dataTableWrapper.classList.add('no-data');
+      document.getElementById('paginationContainer').innerHTML = '';
     } else {
       emptyState.classList.add('hidden');
+      tableContent.classList.remove('hidden');
+      dataTableWrapper.classList.remove('no-data');
+      renderTablePage(1); // Jump back to page 1 on search
     }
   }
 
@@ -87,37 +296,30 @@
    * Select a row and show detail panel
    */
   function selectRow(element, beneficiaryId) {
-    // Remove active class from all rows
-    document.querySelectorAll('.data-table-row').forEach(row => {
-      row.classList.remove('active');
-    });
-    
-    // Add active class to selected row
+    document.querySelectorAll('.data-table-row').forEach(row => row.classList.remove('active'));
     element.classList.add('active');
-    
-    // Show detail panel with data
     showDetailPanel(beneficiaryId);
   }
 
   /**
-   * Show detail panel
+   * Show detail panel pulling from JS cache
    */
   function showDetailPanel(beneficiaryId) {
     const overlay = document.getElementById('overlay');
     const panel = document.getElementById('detailPanel');
-    const row = document.querySelector(`[onclick*="${beneficiaryId}"]`);
+    const ben = window.beneficiariesData[beneficiaryId];
     
-    if (!row) return;
-    
-    const cells = row.querySelectorAll('.data-table-cell');
-    
-    // Populate detail panel
-    document.getElementById('detailID').textContent = cells[0].textContent.trim() || '-';
-    document.getElementById('detailName').textContent = cells[1].querySelector('span')?.textContent.trim() || '-';
-    document.getElementById('detailAddress').textContent = cells[2].textContent.trim() || '-';
-    document.getElementById('detailGender').textContent = '-';
-    document.getElementById('detailBirthDate').textContent = '-';
-    document.getElementById('detailCellphone').textContent = '-';
+    if (ben) {
+      document.getElementById('detailID').textContent = ben.beneficiaryId || ben._id || '-';
+      document.getElementById('detailName').textContent = `${ben.firstName || ''} ${ben.lastName || ''}`.trim() || '-';
+      document.getElementById('detailAddress').textContent = [ben.purok, ben.barangay, ben.municipality].filter(Boolean).join(', ') || '-';
+      document.getElementById('detailGender').textContent = ben.gender || '-';
+      
+      let bdate = ben.birthDate ? new Date(ben.birthDate).toLocaleDateString() : '-';
+      document.getElementById('detailBirthDate').textContent = bdate;
+      
+      document.getElementById('detailCellphone').textContent = ben.cellphoneNumber || '-';
+    }
     
     overlay.classList.remove('hidden');
     panel.classList.remove('hidden');
@@ -127,13 +329,9 @@
    * Close detail panel
    */
   function closeDetailPanel() {
-    const overlay = document.getElementById('overlay');
-    const panel = document.getElementById('detailPanel');
-    const rows = document.querySelectorAll('.data-table-row');
-    
-    overlay.classList.add('hidden');
-    panel.classList.add('hidden');
-    rows.forEach(row => row.classList.remove('active'));
+    document.getElementById('overlay').classList.add('hidden');
+    document.getElementById('detailPanel').classList.add('hidden');
+    document.querySelectorAll('.data-table-row').forEach(row => row.classList.remove('active'));
   }
 
   /**
@@ -147,14 +345,20 @@
    * Handle add record
    */
   function handleAddRecord() {
-    alert('Add Record modal will open here');
+    if (typeof openAddBeneficiaryModal === 'function') {
+      openAddBeneficiaryModal();
+    } else {
+      console.error('AddingNewBeneficiary modal script not loaded.');
+    }
   }
 
   /**
-   * Initialize event listeners
+   * Initialize event listeners and fetch data
    */
   document.addEventListener('DOMContentLoaded', function() {
-    // Close detail panel when overlay is clicked
     document.getElementById('overlay').addEventListener('click', closeDetailPanel);
+    loadBeneficiaries();
   });
 </script>
+
+<?php include_once '../ui/AddingNewBeneficiary.php'; ?>

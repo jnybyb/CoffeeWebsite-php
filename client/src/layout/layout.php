@@ -76,6 +76,8 @@
       overflow-y: auto;
       padding: 0;
       background-color: var(--white);
+      display: flex;
+      flex-direction: column;
     }
 
     .content-placeholder {

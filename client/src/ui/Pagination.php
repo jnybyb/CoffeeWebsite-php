@@ -120,6 +120,7 @@ function getPageNumbers($currentPage, $totalPages) {
 $pageNumbers = getPageNumbers($currentPage, $totalPages);
 ?>
 
+<?php if ($totalRecords > 0): ?>
 <div class="pagination-container">
   <div class="pagination-left">
     Items <?php echo $start; ?>-<?php echo $end; ?> of <?php echo $totalRecords; ?> entries
@@ -162,10 +163,9 @@ $pageNumbers = getPageNumbers($currentPage, $totalPages);
         ›
       </button>
     </div>
-
-
   </div>
 </div>
+<?php endif; ?>
 
 <style>
   /* ===============================
@@ -179,13 +179,14 @@ $pageNumbers = getPageNumbers($currentPage, $totalPages);
     background-color: white;
     border: none;
     border-top: 0.5px solid rgba(36, 99, 59, 0.3);
+    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.05);
     border-radius: 0;
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
     position: sticky;
     bottom: 0;
     width: auto;
     z-index: 5;
     font-family: var(--font-main, 'Montserrat', sans-serif);
+    margin-top: auto;
   }
 
   .pagination-left {

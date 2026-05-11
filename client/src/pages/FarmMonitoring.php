@@ -127,8 +127,15 @@
 </div>
 </div>
 
+<?php include_once '../ui/AddingNewFarmPlot.php'; ?>
+
 <script>
   function handleAddPlot() {
-    alert('Add Farm Plot modal will open here');
+    // Pass empty array for beneficiaries for now, to be populated dynamically later
+    if (typeof openAddFarmPlotModal === 'function') {
+      openAddFarmPlotModal([]);
+    } else {
+      console.error('AddingNewFarmPlot modal script not loaded.');
+    }
   }
 </script>
