@@ -21,6 +21,10 @@
     <?php include 'MainContent.php'; ?>
   </div>
 
+  <!-- Global Modals -->
+  <?php include_once __DIR__ . '/../ui/LoadingModal.php'; ?>
+  <?php include_once __DIR__ . '/../ui/AlertModal.php'; ?>
+
   <style>
     /* ===============================
          ROOT VARIABLES
@@ -78,6 +82,7 @@
       background-color: var(--white);
       display: flex;
       flex-direction: column;
+      position: relative;
     }
 
     .content-placeholder {

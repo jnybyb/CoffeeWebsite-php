@@ -1,32 +1,32 @@
 <?php
 /**
- * AddingNewBeneficiary Component
+ * EditBenefeciaryDetails Component
  * 
  * Usage:
- * include_once '../ui/AddingNewBeneficiary.php';
+ * include_once '../ui/EditBenefeciaryDetails.php';
  * 
  * To open:
- * openAddBeneficiaryModal();
+ * openEditBeneficiaryModal(beneficiaryId);
  */
 ?>
 <style>
-.add-ben-modal-overlay {
+.edit-ben-modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background-color: rgba(0, 0, 0, 0.75);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 10001;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.3s ease, visibility 0.3s ease;
 }
-.add-ben-modal-overlay.active {
+.edit-ben-modal-overlay.active {
   opacity: 1;
   visibility: visible;
 }
-.add-ben-form-container {
+.edit-ben-form-container {
   background-color: var(--white, #ffffff);
   border-radius: 5px;
   max-width: 500px;
@@ -39,10 +39,10 @@
   transform: scale(0.95);
   transition: transform 0.3s ease;
 }
-.add-ben-modal-overlay.active .add-ben-form-container {
+.edit-ben-modal-overlay.active .edit-ben-form-container {
   transform: scale(1);
 }
-.add-ben-header {
+.edit-ben-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -54,7 +54,7 @@
   top: 0;
   z-index: 10;
 }
-.add-ben-close-btn {
+.edit-ben-close-btn {
   background: none;
   border: none;
   font-size: 30px;
@@ -69,28 +69,28 @@
   border-radius: 50%;
   transition: background-color 0.2s;
 }
-.add-ben-close-btn:hover {
+.edit-ben-close-btn:hover {
   background-color: var(--border-gray, #e9ecef);
 }
-.add-ben-content-area {
+.edit-ben-content-area {
   overflow-y: auto;
   scrollbar-width: thin;
   padding: 0 0.75rem;
   flex: 1;
 }
-.add-ben-content-area::-webkit-scrollbar { width: 6px; }
-.add-ben-content-area::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
-.add-ben-content-area::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
-.add-ben-content-area::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+.edit-ben-content-area::-webkit-scrollbar { width: 6px; }
+.edit-ben-content-area::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+.edit-ben-content-area::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+.edit-ben-content-area::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
-.add-ben-section-title {
+.edit-ben-section-title {
   color: var(--black, #000);
   margin-bottom: 1.5rem;
   font-size: 0.9rem;
   font-weight: 600;
 }
 
-.add-ben-picture-container {
+.edit-ben-picture-container {
   min-width: 150px;
   max-width: 150px;
   display: flex;
@@ -103,7 +103,7 @@
   border-radius: 4px;
   border: 1px solid var(--border-gray, #e9ecef);
 }
-.add-ben-picture-preview {
+.edit-ben-picture-preview {
   width: 70px;
   height: 70px;
   border-radius: 50%;
@@ -115,13 +115,13 @@
   border: 1px solid var(--border-gray, #e9ecef);
   overflow: hidden;
 }
-.add-ben-picture-preview img {
+.edit-ben-picture-preview img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
 }
-.add-ben-file-input {
+.edit-ben-file-input {
   width: 100%;
   display: block;
   margin: 0 auto 6px auto;
@@ -136,18 +136,22 @@
 }
 </style>
 
-<div class="add-ben-modal-overlay" id="addBeneficiaryModal">
-  <form class="add-ben-form-container" id="addBeneficiaryForm" onsubmit="handleBeneficiarySubmit(event)">
-    <div class="add-ben-header">
-      <h2 style="color: var(--dark-green, #055035); margin: 0; font-size: 1.2rem; font-weight: 700;">Add Beneficiary Record</h2>
-      <button type="button" class="add-ben-close-btn" onclick="closeAddBeneficiaryModal()">×</button>
+<div class="edit-ben-modal-overlay" id="editBeneficiaryModal">
+  <form class="edit-ben-form-container" id="editBeneficiaryForm" onsubmit="handleEditBeneficiarySubmit(event)">
+    <!-- DB auto-increment ID to put in the API request path -->
+    <input type="hidden" name="id" id="editBenDbId" />
+    <input type="hidden" name="originalPicture" id="editOriginalPicture" />
+
+    <div class="edit-ben-header">
+      <h2 style="color: var(--dark-green, #055035); margin: 0; font-size: 1.2rem; font-weight: 700;">Edit Beneficiary Record</h2>
+      <button type="button" class="edit-ben-close-btn" onclick="closeEditBeneficiaryModal()">×</button>
     </div>
 
-    <div class="add-ben-content-area">
+    <div class="edit-ben-content-area">
       <div style="padding: 1rem; display: flex; flex-direction: column; gap: 12px;">
         
         <div>
-          <h3 class="add-ben-section-title" style="margin-bottom: 0.5rem;">Personal Information</h3>
+          <h3 class="edit-ben-section-title" style="margin-bottom: 0.5rem;">Personal Information</h3>
           
           <div style="display: flex; gap: 12px; align-items: stretch; margin-bottom: 12px;">
             <div style="flex: 1; display: flex; flex-direction: column; gap: 7px;">
@@ -163,16 +167,16 @@
               ?>
             </div>
             
-            <div class="add-ben-picture-container">
-              <div class="add-ben-picture-preview" id="picturePreviewContainer">
+            <div class="edit-ben-picture-container">
+              <div class="edit-ben-picture-preview" id="editPicturePreviewContainer">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="#6c757d">
                   <circle cx="12" cy="8" r="4"/>
                   <path d="M12 14c-4.418 0-8 1.79-8 4v2h16v-2c0-2.21-3.582-4-8-4z"/>
                 </svg>
               </div>
               <div style="width: 100%; text-align: center;">
-                <input type="file" name="picture" accept="image/*" class="add-ben-file-input" onchange="handlePictureChange(event)" />
-                <p style="font-size: 8px; color: #6c757d; margin: 0;">Upload profile picture</p>
+                <input type="file" name="picture" accept="image/*" class="edit-ben-file-input" onchange="handleEditPictureChange(event)" />
+                <p style="font-size: 8px; color: #6c757d; margin: 0;">Upload new profile picture</p>
               </div>
             </div>
           </div>
@@ -204,7 +208,7 @@
         </div>
 
         <div style="margin-top: 12px;">
-          <h3 class="add-ben-section-title" style="margin-bottom: 0.5rem;">Address Information</h3>
+          <h3 class="edit-ben-section-title" style="margin-bottom: 0.5rem;">Address Information</h3>
           
           <div style="display: flex; gap: 6px; flex-wrap: wrap;">
             <div style="flex: 1 1 calc(50% - 3px);">
@@ -239,11 +243,11 @@
           </div>
         </div>
 
-        <div id="benSubmitError" style="color: var(--danger-red, #b00020); font-size: 10px; margin-top: 6px; text-align: center; display: none;"></div>
+        <div id="editBenSubmitError" style="color: var(--danger-red, #b00020); font-size: 10px; margin-top: 6px; text-align: center; display: none;"></div>
 
         <div style="display: flex; gap: 0.75rem; justify-content: flex-end; padding-top: 0.75rem; border-top: 1px solid rgba(0,0,0,0.035); margin-top: 12px;">
           <?php
-          $btnType = 'cancel'; $btnOnClick = 'closeAddBeneficiaryModal()'; $btnStyles = 'font-size: 11px; padding: 10px 18px; border-radius: 5px;';
+          $btnType = 'cancel'; $btnOnClick = 'closeEditBeneficiaryModal()'; $btnStyles = 'font-size: 11px; padding: 10px 18px; border-radius: 5px;';
           include __DIR__ . '/Button.php';
           
           $btnType = 'save'; $btnText = 'Save'; $btnSubmit = true; $btnStyles = 'font-size: 11px; padding: 10px 18px; border-radius: 5px;';
@@ -257,13 +261,13 @@
 </div>
 
 <script>
-  let cachedProvinces = [];
+  let cachedEditProvinces = [];
 
-  async function loadProvinces() {
-    const provinceSelect = document.querySelector('#addBeneficiaryForm select[name="province"]');
+  async function loadEditProvinces(selectedProvince = null, selectedMunicipality = null, selectedBarangay = null) {
+    const provinceSelect = document.querySelector('#editBeneficiaryForm select[name="province"]');
     if (!provinceSelect) return;
     
-    if (cachedProvinces.length === 0) {
+    if (cachedEditProvinces.length === 0) {
       try {
         const apiUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://localhost:5000/api';
         const token = localStorage.getItem('authToken');
@@ -271,7 +275,7 @@
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
-            cachedProvinces = await response.json();
+            cachedEditProvinces = await response.json();
         }
       } catch (err) {
         console.error('Failed to load provinces', err);
@@ -282,17 +286,23 @@
     provinceSelect.innerHTML = '';
     provinceSelect.appendChild(defaultOption);
     
-    cachedProvinces.forEach(prov => {
+    cachedEditProvinces.forEach(prov => {
         const opt = document.createElement('option');
         opt.value = prov;
         opt.textContent = prov;
         opt.style.color = '#333';
         provinceSelect.appendChild(opt);
     });
+
+    if (selectedProvince) {
+      provinceSelect.value = selectedProvince;
+      await loadEditMunicipalities(selectedProvince, selectedMunicipality, selectedBarangay);
+    }
   }
 
-  async function loadMunicipalities(province) {
-    const municipalitySelect = document.querySelector('#addBeneficiaryForm select[name="municipality"]');
+  async function loadEditMunicipalities(province, selectedMunicipality = null, selectedBarangay = null) {
+    const municipalitySelect = document.querySelector('#editBeneficiaryForm select[name="municipality"]');
+    if (!municipalitySelect) return;
     const defaultOption = municipalitySelect.options[0];
     municipalitySelect.innerHTML = '';
     municipalitySelect.appendChild(defaultOption);
@@ -316,14 +326,20 @@
                 municipalitySelect.appendChild(opt);
             });
             municipalitySelect.disabled = false;
+            
+            if (selectedMunicipality) {
+              municipalitySelect.value = selectedMunicipality;
+              await loadEditBarangays(province, selectedMunicipality, selectedBarangay);
+            }
         }
     } catch (err) {
         console.error('Failed to load municipalities', err);
     }
   }
 
-  async function loadBarangays(province, municipality) {
-    const barangaySelect = document.querySelector('#addBeneficiaryForm select[name="barangay"]');
+  async function loadEditBarangays(province, municipality, selectedBarangay = null) {
+    const barangaySelect = document.querySelector('#editBeneficiaryForm select[name="barangay"]');
+    if (!barangaySelect) return;
     const defaultOption = barangaySelect.options[0];
     barangaySelect.innerHTML = '';
     barangaySelect.appendChild(defaultOption);
@@ -347,38 +363,42 @@
                 barangaySelect.appendChild(opt);
             });
             barangaySelect.disabled = false;
+            
+            if (selectedBarangay) {
+              barangaySelect.value = selectedBarangay;
+            }
         }
     } catch (err) {
         console.error('Failed to load barangays', err);
     }
   }
 
-  // Set up event listeners for cascading selects
-  const addBenForm = document.getElementById('addBeneficiaryForm');
-  if (addBenForm) {
-      addBenForm.addEventListener('change', (e) => {
+  // Set up event listeners for cascading selects in the Edit form
+  const editBenForm = document.getElementById('editBeneficiaryForm');
+  if (editBenForm) {
+      editBenForm.addEventListener('change', (e) => {
           if (e.target.name === 'province') {
               const prov = e.target.value;
-              const municipalitySelect = addBenForm.querySelector('select[name="municipality"]');
+              const municipalitySelect = editBenForm.querySelector('select[name="municipality"]');
               if (municipalitySelect) {
                   municipalitySelect.selectedIndex = 0;
                   municipalitySelect.disabled = true;
               }
-              const barangaySelect = addBenForm.querySelector('select[name="barangay"]');
+              const barangaySelect = editBenForm.querySelector('select[name="barangay"]');
               if (barangaySelect) {
                   barangaySelect.selectedIndex = 0;
                   barangaySelect.disabled = true;
               }
-              if (prov) loadMunicipalities(prov);
+              if (prov) loadEditMunicipalities(prov);
           } else if (e.target.name === 'municipality') {
               const mun = e.target.value;
-              const prov = addBenForm.querySelector('select[name="province"]').value;
-              const barangaySelect = addBenForm.querySelector('select[name="barangay"]');
+              const prov = editBenForm.querySelector('select[name="province"]').value;
+              const barangaySelect = editBenForm.querySelector('select[name="barangay"]');
               if (barangaySelect) {
                   barangaySelect.selectedIndex = 0;
                   barangaySelect.disabled = true;
               }
-              if (prov && mun) loadBarangays(prov, mun);
+              if (prov && mun) loadEditBarangays(prov, mun);
           }
       });
   }
@@ -481,46 +501,40 @@
     return isValid;
   }
 
-  function openAddBeneficiaryModal() {
-    document.getElementById('addBeneficiaryForm').reset();
-    clearFormErrors(document.getElementById('addBeneficiaryForm'));
-    document.getElementById('picturePreviewContainer').innerHTML = `
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="#6c757d">
-        <circle cx="12" cy="8" r="4"/>
-        <path d="M12 14c-4.418 0-8 1.79-8 4v2h16v-2c0-2.21-3.582-4-8-4z"/>
-      </svg>
-    `;
-    document.getElementById('benSubmitError').style.display = 'none';
-    
-    // Clear Age field
-    const ageInputs = document.querySelectorAll('.age-input');
-    ageInputs.forEach(input => input.value = '—');
-    
-    // Reset and disable cascading dropdowns
-    const municipalitySelect = document.querySelector('#addBeneficiaryForm select[name="municipality"]');
-    if (municipalitySelect) { municipalitySelect.disabled = true; municipalitySelect.selectedIndex = 0; }
-    const barangaySelect = document.querySelector('#addBeneficiaryForm select[name="barangay"]');
-    if (barangaySelect) { barangaySelect.disabled = true; barangaySelect.selectedIndex = 0; }
-    
-    loadProvinces();
-    
-    document.getElementById('addBeneficiaryModal').classList.add('active');
-  }
+  async function openEditBeneficiaryModal(beneficiaryId) {
+    const ben = window.beneficiariesData[beneficiaryId];
+    if (!ben) return;
 
-  function closeAddBeneficiaryModal() {
-    document.getElementById('addBeneficiaryModal').classList.remove('active');
-  }
+    document.getElementById('editBeneficiaryForm').reset();
+    clearFormErrors(document.getElementById('editBeneficiaryForm'));
+    document.getElementById('editBenDbId').value = ben.id || '';
+    document.getElementById('editOriginalPicture').value = ben.picture || '';
+    document.getElementById('editBenSubmitError').style.display = 'none';
 
-  function handlePictureChange(event) {
-    const file = event.target.files[0];
-    const previewContainer = document.getElementById('picturePreviewContainer');
-    
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        previewContainer.innerHTML = `<img src="${e.target.result}" alt="Preview" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />`;
-      };
-      reader.readAsDataURL(file);
+    // Populate standard text fields
+    const form = document.getElementById('editBeneficiaryForm');
+    form.elements['firstName'].value = ben.firstName || '';
+    form.elements['middleName'].value = ben.middleName || '';
+    form.elements['lastName'].value = ben.lastName || '';
+    form.elements['gender'].value = ben.gender || '';
+    form.elements['maritalStatus'].value = ben.maritalStatus || '';
+    form.elements['birthDate'].value = ben.birthDate || '';
+    form.elements['cellphone'].value = ben.cellphone || '';
+    form.elements['purok'].value = ben.purok || '';
+
+    // Calculate age (trigger change event or calculate directly)
+    const dateInput = form.elements['birthDate'];
+    if (dateInput) {
+      const event = new Event('change');
+      dateInput.dispatchEvent(event);
+    }
+
+    // Populate profile picture preview
+    const previewContainer = document.getElementById('editPicturePreviewContainer');
+    if (ben.picture) {
+      const apiUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://localhost:5000/api';
+      const imgUrl = `${apiUrl.replace('/api', '')}${ben.picture}`;
+      previewContainer.innerHTML = `<img src="${imgUrl}" alt="Preview" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />`;
     } else {
       previewContainer.innerHTML = `
         <svg width="48" height="48" viewBox="0 0 24 24" fill="#6c757d">
@@ -529,12 +543,55 @@
         </svg>
       `;
     }
+
+    // Reset and load cascading dropdowns for address
+    const municipalitySelect = form.querySelector('select[name="municipality"]');
+    if (municipalitySelect) { municipalitySelect.disabled = true; municipalitySelect.selectedIndex = 0; }
+    const barangaySelect = form.querySelector('select[name="barangay"]');
+    if (barangaySelect) { barangaySelect.disabled = true; barangaySelect.selectedIndex = 0; }
+
+    // Start cascaded loading of address dropdowns
+    await loadEditProvinces(ben.province, ben.municipality, ben.barangay);
+
+    document.getElementById('editBeneficiaryModal').classList.add('active');
   }
 
-  async function handleBeneficiarySubmit(e) {
+  function closeEditBeneficiaryModal() {
+    document.getElementById('editBeneficiaryModal').classList.remove('active');
+  }
+
+  function handleEditPictureChange(event) {
+    const file = event.target.files[0];
+    const previewContainer = document.getElementById('editPicturePreviewContainer');
+    
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        previewContainer.innerHTML = `<img src="${e.target.result}" alt="Preview" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />`;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // Re-populate with original picture if it exists
+      const originalPic = document.getElementById('editOriginalPicture').value;
+      if (originalPic) {
+        const apiUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://localhost:5000/api';
+        const imgUrl = `${apiUrl.replace('/api', '')}${originalPic}`;
+        previewContainer.innerHTML = `<img src="${imgUrl}" alt="Preview" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />`;
+      } else {
+        previewContainer.innerHTML = `
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="#6c757d">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M12 14c-4.418 0-8 1.79-8 4v2h16v-2c0-2.21-3.582-4-8-4z"/>
+          </svg>
+        `;
+      }
+    }
+  }
+
+  async function handleEditBeneficiarySubmit(e) {
     e.preventDefault();
     const form = e.target;
-    const errorEl = document.getElementById('benSubmitError');
+    const errorEl = document.getElementById('editBenSubmitError');
     errorEl.style.display = 'none';
     
     // Validate form fields dynamically
@@ -553,17 +610,26 @@
         return;
     }
 
+    const dbId = document.getElementById('editBenDbId').value;
+    if (!dbId) {
+        errorEl.textContent = 'Error: Beneficiary ID is missing.';
+        errorEl.style.display = 'block';
+        return;
+    }
+
     const formData = new FormData(form);
     const apiUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://localhost:5000/api';
 
-    // 1. Display LoadingModal (above the Adding Modal)
+    // 1. Display LoadingModal (above the Edit Modal)
     if (typeof ModalTypes !== 'undefined') {
-        ModalTypes.showSaving({ title: 'Saving', message: 'Adding beneficiary record...' });
+        ModalTypes.showSaving({ title: 'Saving', message: 'Saving beneficiary changes...' });
+    } else if (typeof LoadingModal !== 'undefined') {
+        LoadingModal.show({ title: 'Saving...', message: 'Saving beneficiary changes', spinnerColor: '#055035' });
     }
 
     try {
-        const response = await fetch(`${apiUrl}/beneficiaries`, {
-            method: 'POST',
+        const response = await fetch(`${apiUrl}/beneficiaries/${dbId}`, {
+            method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`
             },
@@ -575,28 +641,33 @@
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || errorData.message || 'Failed to add beneficiary');
+            throw new Error(errorData.error || errorData.message || 'Failed to update beneficiary');
         }
 
-        // 2. Hide loading and close adding modal BEFORE showing success AlertModal
+        // 2. Hide loading and close edit modal BEFORE showing success AlertModal
         if (typeof LoadingModal !== 'undefined') {
             LoadingModal.hide();
         }
         
-        closeAddBeneficiaryModal();
+        closeEditBeneficiaryModal();
+
+        // Close details panel as the data has updated
+        if (typeof closeDetailPanel === 'function') {
+            closeDetailPanel();
+        }
 
         if (typeof AlertModal !== 'undefined') {
             AlertModal.show({
                 type: 'success',
                 title: 'Success!',
-                message: 'Beneficiary record has been added successfully.',
+                message: 'Beneficiary record has been updated successfully.',
                 hideButton: true,
                 autoClose: true,
                 autoCloseDelay: 1500,
                 borderRadius: 4
             });
         } else {
-            alert("Beneficiary added successfully!");
+            alert("Beneficiary updated successfully!");
         }
 
         // Refresh the table if the function exists
@@ -610,11 +681,11 @@
         }
         
         if (errorEl) {
-            errorEl.textContent = error.message || 'An error occurred while saving the beneficiary.';
+            errorEl.textContent = error.message || 'An error occurred while updating the beneficiary.';
             errorEl.style.display = 'block';
             errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
-            alert("Error: " + (error.message || 'An error occurred while saving.'));
+            alert("Error: " + (error.message || 'An error occurred while updating.'));
         }
     }
   }

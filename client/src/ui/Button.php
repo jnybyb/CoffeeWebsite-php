@@ -3,7 +3,7 @@
  * Reusable Button Component
  * 
  * Usage Example:
- * $btnType = 'save'; // 'add', 'cancel', 'save', 'view-mode', 'add-coordinate', 'action'
+ * $btnType = 'save'; // 'add', 'cancel', 'save', 'view-mode', 'add-coordinate', 'action', 'edit', 'delete'
  * $btnText = 'Save Changes';
  * $btnOnClick = 'submitForm()';
  * $btnDisabled = false;
@@ -108,6 +108,36 @@ if (!defined('BUTTON_STYLES_INCLUDED')) {
         margin-top: 6px;
     }
 
+    /* Outlined edit button — green border, no background */
+    .shared-ui-btn.type-edit {
+        border: 1.5px solid var(--dark-green, #055035);
+        background-color: var(--white, #ffffff);
+        color: var(--dark-green, #055035);
+        padding: 4px 12px;
+        font-size: 0.62rem;
+        border-radius: 5px;
+        gap: 4px;
+    }
+    .shared-ui-btn.type-edit:active:not(:disabled) {
+        background-color: var(--dark-green, #055035);
+        color: var(--white, #ffffff);
+    }
+
+    /* Outlined delete button — red border, no background */
+    .shared-ui-btn.type-delete {
+        border: 1.5px solid #dc3545;
+        background-color: var(--white, #ffffff);
+        color: #dc3545;
+        padding: 4px 12px;
+        font-size: 0.62rem;
+        border-radius: 5px;
+        gap: 4px;
+    }
+    .shared-ui-btn.type-delete:active:not(:disabled) {
+        background-color: #dc3545;
+        color: var(--white, #ffffff);
+    }
+
     /* Icon styles */
     .shared-ui-btn-icon {
         display: flex;
@@ -123,15 +153,17 @@ if (!defined('BUTTON_STYLES_INCLUDED')) {
 }
 
 // Map variables (fallbacks to avoid undefined variable warnings)
-$cBtnType = $btnType ?? 'action'; // add, cancel, save, view-mode, add-coordinate, action
+$cBtnType = $btnType ?? 'action'; // add, cancel, save, view-mode, add-coordinate, action, edit, delete
 $cBtnSize = $btnSize ?? 'medium';
 $cBtnText = $btnText ?? '';
 $cBtnDisabled = $btnDisabled ?? false;
 $cBtnOnClick = $btnOnClick ?? '';
 $cBtnIconSrc = $btnIconSrc ?? '';
+$cBtnSvgIcon = $btnSvgIcon ?? ''; // Raw SVG string (optional, used by edit/delete types)
 $cBtnIsActive = $btnIsActive ?? false; // For view-mode
 $cBtnSubmit = $btnSubmit ?? false;
 $cBtnStyles = $btnStyles ?? '';
+$cBtnId = $btnId ?? '';
 
 // Determine default text based on type if empty
 if ($cBtnText === '') {
@@ -142,7 +174,8 @@ if ($cBtnText === '') {
 
 // Build classes
 $classes = ['shared-ui-btn', 'type-' . $cBtnType];
-if ($cBtnType !== 'view-mode' && $cBtnType !== 'add-coordinate') {
+$noSizeTypes = ['view-mode', 'add-coordinate', 'edit', 'delete'];
+if (!in_array($cBtnType, $noSizeTypes)) {
     $classes[] = 'size-' . $cBtnSize;
 }
 if ($cBtnIsActive) {
@@ -156,10 +189,13 @@ $disabledAttr = $cBtnDisabled ? 'disabled' : '';
 $onClickAttr = (!empty($cBtnOnClick) && !$cBtnDisabled) ? 'onclick="' . htmlspecialchars($cBtnOnClick) . '"' : '';
 $typeAttr = ($cBtnSubmit || $cBtnType === 'save') ? 'type="submit"' : 'type="button"';
 $styleAttr = !empty($cBtnStyles) ? 'style="' . htmlspecialchars($cBtnStyles) . '"' : '';
+$idAttr = !empty($cBtnId) ? 'id="' . htmlspecialchars($cBtnId) . '"' : '';
 ?>
 
-<button <?= $typeAttr ?> class="<?= $classString ?>" <?= $disabledAttr ?> <?= $onClickAttr ?> <?= $styleAttr ?>>
-    <?php if (!empty($cBtnIconSrc)): ?>
+<button <?= $typeAttr ?> <?= $idAttr ?> class="<?= $classString ?>" <?= $disabledAttr ?> <?= $onClickAttr ?> <?= $styleAttr ?>>
+    <?php if (!empty($cBtnSvgIcon)): ?>
+        <?= $cBtnSvgIcon ?>
+    <?php elseif (!empty($cBtnIconSrc)): ?>
         <span class="shared-ui-btn-icon">
             <img src="<?= htmlspecialchars($cBtnIconSrc) ?>" alt="icon" />
         </span>
@@ -170,7 +206,7 @@ $styleAttr = !empty($cBtnStyles) ? 'style="' . htmlspecialchars($cBtnStyles) . '
 <?php
 // Clean up variables so they don't bleed into the next include
 unset(
-    $btnType, $btnSize, $btnText, $btnDisabled, $btnOnClick, 
-    $btnIconSrc, $btnIsActive, $btnSubmit, $btnStyles
+    $btnType, $btnSize, $btnText, $btnDisabled, $btnOnClick,
+    $btnIconSrc, $btnSvgIcon, $btnIsActive, $btnSubmit, $btnStyles, $btnId
 );
 ?>

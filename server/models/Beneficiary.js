@@ -38,7 +38,7 @@ class Beneficiary {
   static async findById(id) {
     const [rows] = await getPromisePool().query('SELECT * FROM beneficiaries WHERE id = ?', [id]);
     if (!rows.length) return null;
-    
+
     const r = rows[0];
     // Format date correctly without timezone conversion
     let birth = null;
@@ -74,7 +74,7 @@ class Beneficiary {
     if (beneficiaryData.beneficiaryId && beneficiaryData.beneficiaryId.length > 20) {
       throw new Error(`Beneficiary ID "${beneficiaryData.beneficiaryId}" is too long (${beneficiaryData.beneficiaryId.length} characters). Maximum allowed is 20.`);
     }
-    
+
     const sql = `INSERT INTO beneficiaries 
       (beneficiary_id, first_name, middle_name, last_name, purok, barangay, municipality, province, gender, birth_date, age, marital_status, cellphone_number, picture)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -94,7 +94,7 @@ class Beneficiary {
       beneficiaryData.cellphoneNumber || beneficiaryData.cellphone,  // Support both field names
       picturePath
     ];
-    
+
     const [result] = await getPromisePool().query(sql, params);
     return { id: result.insertId, beneficiaryId: beneficiaryData.beneficiaryId };
   }
@@ -104,7 +104,7 @@ class Beneficiary {
       first_name = ?, middle_name = ?, last_name = ?, purok = ?, barangay = ?, municipality = ?, province = ?, 
       gender = ?, birth_date = ?, age = ?, marital_status = ?, cellphone_number = ?${picturePath ? ', picture = ?' : ''}
       WHERE id = ?`;
-    
+
     const params = [
       beneficiaryData.firstName,
       beneficiaryData.middleName || null,
@@ -121,7 +121,7 @@ class Beneficiary {
       ...(picturePath ? [picturePath] : []),
       id
     ];
-    
+
     const [result] = await getPromisePool().query(sql, params);
     return result.affectedRows > 0;
   }
@@ -134,7 +134,7 @@ class Beneficiary {
   static async findByBeneficiaryId(beneficiaryId) {
     const [rows] = await getPromisePool().query('SELECT * FROM beneficiaries WHERE beneficiary_id = ?', [beneficiaryId]);
     if (!rows.length) return null;
-    
+
     const r = rows[0];
     // Format date correctly without timezone conversion
     let birth = null;

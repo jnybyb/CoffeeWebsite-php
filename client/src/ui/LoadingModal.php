@@ -44,7 +44,7 @@
     display: none; /* hidden by default */
     justify-content: center;
     align-items: center;
-    z-index: 2500;
+    z-index: 30000;
     padding: 10px;
     opacity: 0;
     transition: opacity 0.2s ease;
@@ -131,6 +131,11 @@
       </div>
       <div class="lm-progress-text" id="lm-progress-text">0%</div>
     </div>
+
+    <div class="lm-button-container" id="lm-button-container" style="display: none; margin-top: 20px; gap: 10px; justify-content: center;">
+      <button id="lm-btn-cancel" style="padding: 8px 16px; border: 1px solid #ccc; background: white; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 13px;">Cancel</button>
+      <button id="lm-btn-confirm" style="padding: 8px 16px; border: none; background: #dc3545; color: white; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 13px;">Confirm</button>
+    </div>
   </div>
 </div>
 
@@ -138,15 +143,26 @@
   const LoadingModal = {
     dismissible: false,
     onCloseCallback: null,
+    hideTimeout: null,
 
     show: function(options = {}) {
+      if (this.hideTimeout) {
+        clearTimeout(this.hideTimeout);
+        this.hideTimeout = null;
+      }
       const backdrop = document.getElementById('loading-modal-backdrop');
       const titleEl = document.getElementById('lm-title');
       const messageEl = document.getElementById('lm-message');
       const subMessageEl = document.getElementById('lm-submessage');
       const progressContainer = document.getElementById('lm-progress-container');
+      const spinnerContainer = document.getElementById('lm-spinner').parentElement;
+      const buttonContainer = document.getElementById('lm-button-container');
       const spinnerEl = document.getElementById('lm-spinner');
       const progressFill = document.getElementById('lm-progress-bar-fill');
+
+      // Reset visibility for regular show mode
+      spinnerContainer.style.display = 'block';
+      buttonContainer.style.display = 'none';
 
       // Set options with defaults
       titleEl.innerText = options.title || 'Processing';
@@ -186,6 +202,73 @@
       document.addEventListener('keydown', this.handleKeydown);
     },
 
+    showConfirm: function(options = {}) {
+      if (this.hideTimeout) {
+        clearTimeout(this.hideTimeout);
+        this.hideTimeout = null;
+      }
+      const backdrop = document.getElementById('loading-modal-backdrop');
+      const titleEl = document.getElementById('lm-title');
+      const messageEl = document.getElementById('lm-message');
+      const subMessageEl = document.getElementById('lm-submessage');
+      const progressContainer = document.getElementById('lm-progress-container');
+      const spinnerContainer = document.getElementById('lm-spinner').parentElement;
+      const buttonContainer = document.getElementById('lm-button-container');
+      const confirmBtn = document.getElementById('lm-btn-confirm');
+      const cancelBtn = document.getElementById('lm-btn-cancel');
+
+      titleEl.innerText = options.title || 'Confirm';
+      messageEl.innerText = options.message || 'Are you sure?';
+      
+      if (options.subMessage) {
+        subMessageEl.innerText = options.subMessage;
+        subMessageEl.style.display = 'block';
+      } else {
+        subMessageEl.style.display = 'none';
+      }
+
+      progressContainer.style.display = 'none';
+      spinnerContainer.style.display = 'none'; // hide spinner
+      buttonContainer.style.display = 'flex'; // show buttons
+      messageEl.style.marginBottom = '0';
+
+      confirmBtn.innerText = options.confirmText || 'Confirm';
+      cancelBtn.innerText = options.cancelText || 'Cancel';
+      
+      confirmBtn.style.backgroundColor = options.confirmColor || '#dc3545';
+
+      // Remove old listeners by cloning
+      const newConfirm = confirmBtn.cloneNode(true);
+      confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
+      const newCancel = cancelBtn.cloneNode(true);
+      cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+
+      newConfirm.addEventListener('click', () => {
+        if(options.onConfirm) {
+            options.onConfirm();
+        } else {
+            this.hide();
+        }
+      });
+      
+      newCancel.addEventListener('click', () => {
+        if(options.onCancel) {
+            options.onCancel();
+        } else {
+            this.hide();
+        }
+      });
+
+      this.dismissible = options.dismissible !== undefined ? options.dismissible : true;
+      this.onCloseCallback = options.onClose || null;
+
+      backdrop.style.display = 'flex';
+      void backdrop.offsetWidth;
+      backdrop.classList.add('show');
+      
+      document.addEventListener('keydown', this.handleKeydown);
+    },
+
     updateProgress: function(progress) {
       if (progress >= 0 && progress <= 100) {
         document.getElementById('lm-progress-bar-fill').style.width = progress + '%';
@@ -197,8 +280,13 @@
       const backdrop = document.getElementById('loading-modal-backdrop');
       backdrop.classList.remove('show');
       
-      setTimeout(() => {
+      if (this.hideTimeout) {
+        clearTimeout(this.hideTimeout);
+      }
+      
+      this.hideTimeout = setTimeout(() => {
         backdrop.style.display = 'none';
+        this.hideTimeout = null;
       }, 200); // match transition duration
 
       document.removeEventListener('keydown', this.handleKeydown);

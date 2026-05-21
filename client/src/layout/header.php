@@ -18,8 +18,6 @@
     </button>
   </div>
 
-  <?php include_once __DIR__ . '/../ui/LoadingModal.php'; ?>
-  <?php include_once __DIR__ . '/../ui/AlertModal.php'; ?>
 </header>
 
 <style>

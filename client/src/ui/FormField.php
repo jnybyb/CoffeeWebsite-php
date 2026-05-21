@@ -197,7 +197,9 @@ switch ($currentFieldType) {
                     <input 
                         type="text" 
                         id="<?= $ageId ?>"
-                        value="—" 
+                        name="age"
+                        value="" 
+                        placeholder="—"
                         readonly 
                         class="shared-form-input age-input" 
                         tabindex="-1"
@@ -210,9 +212,9 @@ switch ($currentFieldType) {
                         const ageInput = document.getElementById('<?= $ageId ?>');
                         if (dateInput && ageInput) {
                             const calculateAge = (dobString) => {
-                                if (!dobString) return '—';
+                                if (!dobString) return '';
                                 const dob = new Date(dobString);
-                                if (isNaN(dob.getTime())) return '—';
+                                if (isNaN(dob.getTime())) return '';
                                 const diff_ms = Date.now() - dob.getTime();
                                 const age_dt = new Date(diff_ms); 
                                 return Math.abs(age_dt.getUTCFullYear() - 1970);

@@ -51,7 +51,7 @@
     display: none;
     justify-content: center;
     align-items: center;
-    z-index: 2600; /* Higher than loading modal */
+    z-index: 31000; /* Higher than loading modal and side drawer */
     padding: 5px;
     opacity: 0;
     transition: opacity 0.2s ease;
@@ -181,6 +181,7 @@
 <script>
   const AlertModal = {
     timer: null,
+    hideTimeout: null,
     onCloseCallback: null,
     onConfirmCallback: null,
     onCancelCallback: null,
@@ -243,6 +244,10 @@
       if (this.timer) {
         clearTimeout(this.timer);
         this.timer = null;
+      }
+      if (this.hideTimeout) {
+        clearTimeout(this.hideTimeout);
+        this.hideTimeout = null;
       }
 
       const backdrop = document.getElementById('alert-modal-backdrop');
@@ -365,9 +370,13 @@
         clearTimeout(this.timer);
         this.timer = null;
       }
+      if (this.hideTimeout) {
+        clearTimeout(this.hideTimeout);
+      }
       
-      setTimeout(() => {
+      this.hideTimeout = setTimeout(() => {
         backdrop.style.display = 'none';
+        this.hideTimeout = null;
       }, 200);
 
       document.removeEventListener('keydown', this.handleKeydown);

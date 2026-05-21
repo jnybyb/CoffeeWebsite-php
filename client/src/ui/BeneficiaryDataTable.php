@@ -61,41 +61,8 @@
     </div>
   </div>
 
-  <!-- Detail Panel Overlay -->
-  <div class="data-table-overlay hidden" id="overlay" onclick="closeDetailPanel()"></div>
-  <div class="data-table-detail-panel hidden" id="detailPanel">
-    <div class="data-table-detail-header">
-      <h3 id="detailTitle">Beneficiary Details</h3>
-      <button class="data-table-detail-close" onclick="closeDetailPanel()">✕</button>
-    </div>
-    <div class="data-table-detail-body" id="detailBody">
-      <!-- Detail content will be populated here -->
-      <div class="data-table-detail-field">
-        <label>Beneficiary ID</label>
-        <div id="detailID">-</div>
-      </div>
-      <div class="data-table-detail-field">
-        <label>Full Name</label>
-        <div id="detailName">-</div>
-      </div>
-      <div class="data-table-detail-field">
-        <label>Gender</label>
-        <div id="detailGender">-</div>
-      </div>
-      <div class="data-table-detail-field">
-        <label>Birth Date</label>
-        <div id="detailBirthDate">-</div>
-      </div>
-      <div class="data-table-detail-field">
-        <label>Address</label>
-        <div id="detailAddress">-</div>
-      </div>
-      <div class="data-table-detail-field">
-        <label>Cellphone</label>
-        <div id="detailCellphone">-</div>
-      </div>
-    </div>
-  </div>
+  <!-- Detail Panel Component -->
+  <?php include '../ui/BeneficiaryDetailPanel.php'; ?>
 </div>
 
 <style>
@@ -122,7 +89,6 @@
     flex: 1;
     min-height: 60vh;
     overflow: hidden;
-    position: relative;
     background-color: var(--white);
     font-family: var(--font-main);
   }
@@ -372,102 +338,12 @@
     display: none;
   }
 
-  /* ===============================
-     OVERLAY & DETAIL PANEL
-     =============================== */
-  .data-table-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.1);
-    z-index: 999;
-  }
 
-  .data-table-overlay.hidden {
-    display: none;
-  }
-
-  .data-table-detail-panel {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 400px;
-    height: 100%;
-    background-color: var(--white);
-    box-shadow: -2px 0 8px var(--shadow-color);
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .data-table-detail-panel.hidden {
-    display: none;
-  }
-
-  .data-table-detail-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem;
-    border-bottom: 1px solid var(--border-gray);
-    flex-shrink: 0;
-  }
-
-  .data-table-detail-header h3 {
-    margin: 0;
-    color: var(--dark-green);
-    font-size: 1rem;
-  }
-
-  .data-table-detail-close {
-    background: none;
-    border: none;
-    font-size: 1.2rem;
-    cursor: pointer;
-    color: #666;
-    transition: color 0.2s ease;
-  }
-
-  .data-table-detail-close:hover {
-    color: var(--dark-green);
-  }
-
-  .data-table-detail-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 1.5rem;
-  }
-
-  .data-table-detail-field {
-    margin-bottom: 1.5rem;
-  }
-
-  .data-table-detail-field label {
-    display: block;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--dark-green);
-    margin-bottom: 0.5rem;
-  }
-
-  .data-table-detail-field div {
-    font-size: 0.75rem;
-    color: #333;
-    padding: 0.5rem;
-    background-color: var(--light-gray);
-    border-radius: 4px;
-  }
 
   /* ===============================
      RESPONSIVE DESIGN
      =============================== */
-  @media (max-width: 1024px) {
-    .data-table-detail-panel {
-      width: 350px;
-    }
-  }
+
 
   @media (max-width: 768px) {
     .data-table-main {
@@ -491,9 +367,7 @@
       justify-content: center;
     }
 
-    .data-table-detail-panel {
-      width: 100%;
-    }
+
 
     .data-table-header-row,
     .data-table-row {
@@ -524,9 +398,7 @@
       padding: 0.4rem 0.8rem;
     }
 
-    .data-table-detail-panel {
-      width: 100%;
-    }
+
   }
 </style>
 
