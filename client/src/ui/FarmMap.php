@@ -18,71 +18,75 @@
   
   .map-style-selector {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 1rem;
+    right: 1rem;
     z-index: 1000;
     display: flex;
     gap: 0.5rem;
   }
-  
+
   .map-style-btn {
-    width: 44px;
-    height: 44px;
-    border-radius: 6px;
-    border: 2px solid white;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    width: 48px;
+    height: 45px;
+    padding: 0;
+    border: 3px solid transparent;
+    border-radius: 4px;
     cursor: pointer;
+    overflow: hidden;
     background-size: cover;
     background-position: center;
     position: relative;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
-  
+
   .map-style-btn.street {
-    background-color: #ddd;
-    /* Placeholder for Street map tile */
-    background-image: url('https://a.tile.openstreetmap.org/12/3421/2143.png');
+    background-image: url('../../assets/images/mapstyles/street.png');
   }
-  
+
   .map-style-btn.satellite {
-    background-color: #333;
-    /* Placeholder for Satellite map tile */
-    background-image: url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/2143/3421');
+    background-image: url('../../assets/images/mapstyles/satellite.png');
   }
 
   .map-style-btn.active {
     border-color: var(--dark-green, #055035);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .map-style-btn:not(.active):hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   }
 
   .map-style-label {
     position: absolute;
-    bottom: -18px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.55rem;
-    background: rgba(0,0,0,0.7);
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.1) 100%);
     color: white;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-weight: 500;
-    white-space: nowrap;
+    font-size: 9px;
+    font-weight: 600;
+    padding: 4px 2px;
+    text-align: center;
+    pointer-events: none;
   }
 </style>
 
 <div class="map-container-inner" id="farmMapId">
   <!-- Map Style Selector -->
   <div class="map-style-selector">
-    <div>
-      <div class="map-style-btn street">
-        <div class="map-style-label">Street</div>
-      </div>
-    </div>
-    <div>
-      <div class="map-style-btn satellite active">
-        <div class="map-style-label">Satellite</div>
-      </div>
-    </div>
+    <button type="button" class="map-style-btn street" id="mapStyleStreetBtn" title="Street">
+      <span class="map-style-label">Street</span>
+    </button>
+    <button type="button" class="map-style-btn satellite active" id="mapStyleSatelliteBtn" title="Satellite">
+      <span class="map-style-label">Satellite</span>
+    </button>
   </div>
 </div>
+
+<?php include_once __DIR__ . '/FarmPlotIndicator.php'; ?>
+<?php include_once __DIR__ . '/PopUp FarmDetails.php'; ?>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -103,12 +107,11 @@
       attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
     }).addTo(map);
 
-    var streetBtn = document.querySelector('.map-style-btn.street');
-    var satelliteBtn = document.querySelector('.map-style-btn.satellite');
+    var streetBtn = document.getElementById('mapStyleStreetBtn');
+    var satelliteBtn = document.getElementById('mapStyleSatelliteBtn');
 
     if (streetBtn && satelliteBtn) {
-        streetBtn.addEventListener('click', function(e) {
-            e.preventDefault();
+        streetBtn.addEventListener('click', function() {
             if (!map.hasLayer(streetLayer)) {
                 map.removeLayer(satelliteLayer);
                 map.addLayer(streetLayer);
@@ -117,8 +120,7 @@
             }
         });
 
-        satelliteBtn.addEventListener('click', function(e) {
-            e.preventDefault();
+        satelliteBtn.addEventListener('click', function() {
             if (!map.hasLayer(satelliteLayer)) {
                 map.removeLayer(streetLayer);
                 map.addLayer(satelliteLayer);
@@ -126,6 +128,144 @@
                 streetBtn.classList.remove('active');
             }
         });
+    }
+
+    window.leafletMap = map;
+
+    let activePolygon = null;
+    let activeCornerMarkers = [];
+
+    window.clearActivePlotBoundary = function() {
+      if (activePolygon && window.leafletMap.hasLayer(activePolygon)) {
+        window.leafletMap.removeLayer(activePolygon);
+      }
+      activePolygon = null;
+
+      activeCornerMarkers.forEach(m => {
+        if (window.leafletMap.hasLayer(m)) {
+          window.leafletMap.removeLayer(m);
+        }
+      });
+      activeCornerMarkers = [];
+    };
+
+    window.showActivePlotBoundary = function(plot) {
+      window.clearActivePlotBoundary();
+
+      if (!plot || !plot.polygon) return;
+
+      activePolygon = plot.polygon;
+      activePolygon.addTo(window.leafletMap);
+
+      if (plot.coordinates && plot.coordinates.length > 0) {
+        plot.coordinates.forEach(coord => {
+          const cornerMarker = L.circleMarker([coord.lat, coord.lng], {
+            radius: 5,
+            color: '#055035',
+            fillColor: '#ffffff',
+            fillOpacity: 1,
+            weight: 3
+          }).addTo(window.leafletMap);
+
+          activeCornerMarkers.push(cornerMarker);
+        });
+      }
+    };
+
+    // Define global function to draw farm plots on Leaflet map
+    window.drawFarmPlotsOnMap = function(plots) {
+      if (!window.leafletMap) return;
+
+      // Clear any active boundary first
+      window.clearActivePlotBoundary();
+
+      // Clear existing polygons
+      if (window.mapPolygons) {
+        window.mapPolygons.forEach(p => {
+          if (window.leafletMap.hasLayer(p)) {
+            window.leafletMap.removeLayer(p);
+          }
+        });
+      }
+      window.mapPolygons = [];
+
+      // Clear existing center markers
+      if (window.mapMarkers) {
+        window.mapMarkers.forEach(m => window.leafletMap.removeLayer(m));
+      }
+      window.mapMarkers = [];
+
+      plots.forEach(plot => {
+        if (plot.coordinates && plot.coordinates.length >= 3) {
+          const latlngs = plot.coordinates.map(c => [c.lat, c.lng]);
+
+          // Draw the plot boundary polygon (do not addTo map yet)
+          const polygon = L.polygon(latlngs, {
+            color: '#055035',
+            fillColor: '#066e46',
+            fillOpacity: 0.35,
+            weight: 2
+          });
+
+          plot.polygon = polygon;
+          window.mapPolygons.push(polygon);
+
+          // ── Centroid marker ──────────────────────────────────────────
+          // Calculate the average lat/lng of all coordinate points
+          let sumLat = 0, sumLng = 0;
+          latlngs.forEach(ll => { sumLat += ll[0]; sumLng += ll[1]; });
+          const centerLat = sumLat / latlngs.length;
+          const centerLng = sumLng / latlngs.length;
+
+          // Build the custom teardrop icon (defined in FarmPlotIndicator.php)
+          const icon = (typeof createLocationIcon === 'function')
+            ? createLocationIcon(plot.beneficiaryPicture, plot.beneficiaryName)
+            : null;
+
+          const markerOpts = icon ? { icon: icon } : {};
+          const marker = L.marker([centerLat, centerLng], markerOpts)
+            .addTo(window.leafletMap);
+
+          // Attach the same popup info to the center marker
+          if (typeof createPlotPreviewPopup === 'function') {
+            marker.bindPopup(createPlotPreviewPopup(plot), { closeButton: false, className: 'custom-popup' });
+          } else {
+            marker.bindPopup(`
+              <div style="font-family:'Montserrat',sans-serif;font-size:11px;color:#333;line-height:1.4;padding:4px;">
+                <h4 style="color:#055035;margin:0 0 4px 0;font-size:12px;font-weight:700;">Plot ID: ${plot.id}</h4>
+                <div style="margin-bottom:2px;"><strong>Owner:</strong> ${plot.beneficiaryName}</div>
+                <div style="margin-bottom:2px;"><strong>Size:</strong> ${plot.hectares ? parseFloat(plot.hectares).toFixed(2) + ' ha' : '—'}</div>
+                <div><strong>Address:</strong> ${plot.address || 'No address'}</div>
+              </div>
+            `);
+          }
+          // Attach popup open/close listeners to the marker
+          marker.on('popupopen', function() {
+            if (typeof window.showActivePlotBoundary === 'function') {
+              window.showActivePlotBoundary(plot);
+            }
+          });
+          marker.on('popupclose', function() {
+            if (typeof window.clearActivePlotBoundary === 'function') {
+              window.clearActivePlotBoundary();
+            }
+          });
+
+          plot.marker = marker;
+          window.mapMarkers.push(marker);
+        }
+      });
+
+      // Fit the map view to cover all plots
+      if (window.mapPolygons.length > 0) {
+        const group = L.featureGroup([...window.mapPolygons, ...window.mapMarkers]);
+        window.leafletMap.fitBounds(group.getBounds(), { padding: [40, 40] });
+      }
+    };
+
+    // If plots are already loaded, draw them now
+    if (window.allFarmPlots) {
+      window.drawFarmPlotsOnMap(window.allFarmPlots);
     }
 
     // Stop propagation on the style selector so clicks don't hit the map

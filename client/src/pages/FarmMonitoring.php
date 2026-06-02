@@ -67,7 +67,7 @@
   </div>
   <div>
     <?php 
-      $buttonText = 'Add Plot'; 
+      $buttonText = 'Add Farm Plot'; 
       $buttonAction = 'handleAddPlot()';
       include '../ui/AddButton.php'; 
     ?>
@@ -128,12 +128,13 @@
 </div>
 
 <?php include_once '../ui/AddingNewFarmPlot.php'; ?>
+<?php include_once '../ui/ViewFarmPlotDetails.php'; ?>
+<?php include_once '../ui/EditFarmPlotDetails.php'; ?>
 
 <script>
   function handleAddPlot() {
-    // Pass empty array for beneficiaries for now, to be populated dynamically later
     if (typeof openAddFarmPlotModal === 'function') {
-      openAddFarmPlotModal([]);
+      openAddFarmPlotModal(window.allBeneficiaries || []);
     } else {
       console.error('AddingNewFarmPlot modal script not loaded.');
     }

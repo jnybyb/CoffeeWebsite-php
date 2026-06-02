@@ -303,7 +303,10 @@
             opt.value = b.id || b.beneficiaryId;
             opt.textContent = b.name || b.fullName || `${b.firstName || ''} ${b.lastName || ''}`.trim();
             // Store data for easy retrieval
-            opt.dataset.address = b.address || [b.purok, b.barangay, b.municipality, b.province].filter(Boolean).join(', ');
+            const addrParts = [b.purok, b.barangay, b.municipality, b.province]
+                .map(p => p ? p.trim() : '')
+                .filter(p => p && p.toLowerCase() !== 'unknown');
+            opt.dataset.address = b.address || addrParts.join(', ');
             opt.dataset.benId = b.beneficiaryId || b.id;
             selectEl.appendChild(opt);
         });

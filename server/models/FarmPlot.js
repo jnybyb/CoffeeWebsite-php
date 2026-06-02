@@ -157,10 +157,12 @@ class FarmPlot {
     try {
       // Update farm_plots table
       const sql = `UPDATE farm_plots SET 
-                   hectares = ?
+                   hectares = COALESCE(?, hectares),
+                   beneficiary_id = COALESCE(?, beneficiary_id)
                    WHERE plot_id = ?`;
       const params = [
-        farmPlotData.hectares || null,
+        farmPlotData.hectares !== undefined ? farmPlotData.hectares : null,
+        farmPlotData.beneficiaryId !== undefined ? farmPlotData.beneficiaryId : null,
         id
       ];
       
