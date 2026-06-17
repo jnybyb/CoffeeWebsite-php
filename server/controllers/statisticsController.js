@@ -16,7 +16,8 @@ class StatisticsController {
   static async getChartData(req, res) {
     try {
       const beneficiaryId = req.query.beneficiaryId || null;
-      const chartData = await Statistics.getChartData(beneficiaryId);
+      const period = req.query.period || 'monthly';
+      const chartData = await Statistics.getChartData(beneficiaryId, period);
       res.json(chartData);
     } catch (error) {
       console.error('Error fetching chart data:', error);

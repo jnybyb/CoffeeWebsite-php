@@ -75,7 +75,7 @@
         <img src="../../assets/icons/users.png" class="metric-icon icon-grey" alt="Users">
         <h3 class="metric-title">Total Beneficiaries</h3>
       </div>
-      <p class="metric-value value-olive">35</p>
+      <p id="metric-total-beneficiaries" class="metric-value value-olive">35</p>
     </div>
 
     <!-- Total Seeds Distributed -->
@@ -84,7 +84,7 @@
         <img src="../../assets/icons/seedling.png" class="metric-icon" alt="Seedling">
         <h3 class="metric-title">Total Seeds Distributed</h3>
       </div>
-      <p class="metric-value value-teal">532,177</p>
+      <p id="metric-seeds-distributed" class="metric-value value-teal">532,177</p>
     </div>
 
     <!-- Alive Crops -->
@@ -93,7 +93,7 @@
         <img src="../../assets/icons/alive-seed.png" class="metric-icon" alt="Alive Crops">
         <h3 class="metric-title">Alive Crops</h3>
       </div>
-      <p class="metric-value value-success">4,482</p>
+      <p id="metric-alive-crops" class="metric-value value-success">4,482</p>
     </div>
 
     <!-- Dead Crops -->
@@ -102,6 +102,6 @@
         <img src="../../assets/icons/dead-seed.png" class="metric-icon" alt="Dead Crops">
         <h3 class="metric-title">Dead Crops</h3>
       </div>
-      <p class="metric-value value-danger">1,800</p>
+      <p id="metric-dead-crops" class="metric-value value-danger">1,800</p>
     </div>
   </div>

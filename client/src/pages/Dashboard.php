@@ -93,7 +93,7 @@
     <div class="dashboard-main-grid">
       <!-- Left Side - Charts -->
       <div style="display: flex; flex-direction: column; height: 100%;">
-        <?php include '../ui/TrendMonitoring.php'; ?>
+        <?php include '../ui/DashboardTrendMonitoring.php'; ?>
       </div>
       
       <!-- Right Side - Recent Activities -->
@@ -103,3 +103,73 @@
     </div>
   </div>
 </div>
+
+<script>
+  (function() {
+    const API_BASE_URL = 'http://localhost:5000/api';
+
+    async function loadDashboardMetrics() {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        window.location.href = '../../login.php';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/statistics`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('authToken');
+          window.location.href = '../../login.php';
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch dashboard statistics');
+        }
+
+        const data = await response.json();
+
+        // Update DOM elements with formatting
+        const totalBeneficiariesEl = document.getElementById('metric-total-beneficiaries');
+        const seedsDistributedEl = document.getElementById('metric-seeds-distributed');
+        const aliveCropsEl = document.getElementById('metric-alive-crops');
+        const deadCropsEl = document.getElementById('metric-dead-crops');
+
+        if (totalBeneficiariesEl) {
+          totalBeneficiariesEl.textContent = (data.totalBeneficiaries || 0).toLocaleString();
+        }
+        if (seedsDistributedEl) {
+          seedsDistributedEl.textContent = (data.totalSeedsDistributed || 0).toLocaleString();
+        }
+        if (aliveCropsEl) {
+          aliveCropsEl.textContent = (data.totalAlive || 0).toLocaleString();
+        }
+        if (deadCropsEl) {
+          deadCropsEl.textContent = (data.totalDead || 0).toLocaleString();
+        }
+      } catch (error) {
+        console.error('Error loading dashboard metrics:', error);
+      }
+    }
+
+    // Load metrics when DOM is ready
+    document.addEventListener('DOMContentLoaded', loadDashboardMetrics);
+
+    // Also load metrics if DOM is already loaded (fallback for SPA layout inclusion)
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      loadDashboardMetrics();
+    }
+
+    // Refresh metrics when navigating back to the dashboard page
+    window.addEventListener('navigationChanged', (event) => {
+      if (event.detail && event.detail.page === 'dashboard') {
+        loadDashboardMetrics();
+      }
+    });
+  })();
+</script>

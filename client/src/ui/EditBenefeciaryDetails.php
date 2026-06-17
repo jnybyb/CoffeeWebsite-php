@@ -185,7 +185,7 @@
             <div style="flex: 1;">
               <?php
               $fieldType = 'select'; $fieldName = 'gender'; $fieldLabel = 'Gender'; $fieldPlaceholder = 'Select gender';
-              $fieldOptions = ['Male' => 'Male', 'Female' => 'Female', 'Other' => 'Other'];
+              $fieldOptions = ['Male' => 'Male', 'Female' => 'Female'];
               include __DIR__ . '/FormField.php';
               ?>
             </div>

@@ -34,12 +34,32 @@ class Statistics {
     }
   }
 
-  static async getChartData(beneficiaryId = null) {
+  static getWeekNumber(d) {
+    const dateCopy = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    dateCopy.setUTCDate(dateCopy.getUTCDate() + 4 - (dateCopy.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(dateCopy.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil((((dateCopy - yearStart) / 86400000) + 1) / 7);
+    return weekNo;
+  }
+
+  static async getChartData(beneficiaryId = null, period = 'monthly') {
     try {
-      // Get monthly data for the last 12 months
-      const twelveMonthsAgo = new Date();
-      twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-      const startDate = twelveMonthsAgo.toISOString().split('T')[0];
+      let dateFormat = '%Y-%m';
+      const startDate = new Date();
+
+      if (period === 'weekly') {
+        dateFormat = '%Y-W%v'; // Monday starting week
+        startDate.setDate(startDate.getDate() - 12 * 7); // Last 12 weeks
+      } else if (period === 'yearly') {
+        dateFormat = '%Y';
+        startDate.setFullYear(startDate.getFullYear() - 5); // Last 5 years
+      } else {
+        // default: monthly
+        dateFormat = '%Y-%m';
+        startDate.setMonth(startDate.getMonth() - 12); // Last 12 months
+      }
+
+      const startDateStr = startDate.toISOString().split('T')[0];
 
       // Build beneficiary filter condition
       const beneficiaryFilter = beneficiaryId 
@@ -47,123 +67,178 @@ class Statistics {
         : '';
       const beneficiaryParams = beneficiaryId ? [beneficiaryId] : [];
 
-      // Get monthly beneficiaries count (only if filtering by beneficiary, otherwise show 1 if exists)
+      // Get beneficiaries count (only if filtering by beneficiary, otherwise show 1 if exists)
       let beneficiariesQuery;
       if (beneficiaryId) {
         beneficiariesQuery = `
           SELECT 
-            DATE_FORMAT(created_at, '%Y-%m') as month,
+            DATE_FORMAT(created_at, '${dateFormat}') as time_key,
             1 as count
           FROM beneficiaries 
           WHERE created_at >= ? AND id = ?
-          GROUP BY DATE_FORMAT(created_at, '%Y-%m')
-          ORDER BY month
+          GROUP BY DATE_FORMAT(created_at, '${dateFormat}')
+          ORDER BY time_key
         `;
       } else {
         beneficiariesQuery = `
           SELECT 
-            DATE_FORMAT(created_at, '%Y-%m') as month,
+            DATE_FORMAT(created_at, '${dateFormat}') as time_key,
             COUNT(*) as count
           FROM beneficiaries 
           WHERE created_at >= ?
-          GROUP BY DATE_FORMAT(created_at, '%Y-%m')
-          ORDER BY month
+          GROUP BY DATE_FORMAT(created_at, '${dateFormat}')
+          ORDER BY time_key
         `;
       }
       const beneficiariesParams = beneficiaryId 
-        ? [startDate, beneficiaryId]
-        : [startDate];
+        ? [startDateStr, beneficiaryId]
+        : [startDateStr];
       const beneficiariesResult = await getPromisePool().query(beneficiariesQuery, beneficiariesParams);
 
-      // Get monthly seedlings distributed
+      // Get seedlings distributed
       const seedlingsQuery = `
         SELECT 
-          DATE_FORMAT(date_received, '%Y-%m') as month,
+          DATE_FORMAT(date_received, '${dateFormat}') as time_key,
           SUM(received_seedling) as count
         FROM coffee_seedlings 
         WHERE date_received >= ? ${beneficiaryFilter}
-        GROUP BY DATE_FORMAT(date_received, '%Y-%m')
-        ORDER BY month
+        GROUP BY DATE_FORMAT(date_received, '${dateFormat}')
+        ORDER BY time_key
       `;
       const seedlingsParams = beneficiaryId 
-        ? [startDate, ...beneficiaryParams]
-        : [startDate];
+        ? [startDateStr, ...beneficiaryParams]
+        : [startDateStr];
       const seedlingsResult = await getPromisePool().query(seedlingsQuery, seedlingsParams);
 
-      // Get monthly crop status data (filter directly by beneficiary using beneficiary_id)
+      // Get crop status data (filter directly by beneficiary using beneficiary_id)
       let cropsQuery;
       let cropsParams;
       if (beneficiaryId) {
         cropsQuery = `
           SELECT 
-            DATE_FORMAT(css.survey_date, '%Y-%m') as month,
+            DATE_FORMAT(css.survey_date, '${dateFormat}') as time_key,
             SUM(css.alive_crops) as alive_count,
             SUM(css.dead_crops) as dead_count
           FROM crop_survey_status css
           WHERE css.survey_date >= ?
             AND css.beneficiary_id = (SELECT beneficiary_id FROM beneficiaries WHERE id = ?)
-          GROUP BY DATE_FORMAT(css.survey_date, '%Y-%m')
-          ORDER BY month
+          GROUP BY DATE_FORMAT(css.survey_date, '${dateFormat}')
+          ORDER BY time_key
         `;
-        cropsParams = [startDate, beneficiaryId];
+        cropsParams = [startDateStr, beneficiaryId];
       } else {
         cropsQuery = `
           SELECT 
-            DATE_FORMAT(survey_date, '%Y-%m') as month,
+            DATE_FORMAT(survey_date, '${dateFormat}') as time_key,
             SUM(alive_crops) as alive_count,
             SUM(dead_crops) as dead_count
           FROM crop_survey_status 
           WHERE survey_date >= ?
-          GROUP BY DATE_FORMAT(survey_date, '%Y-%m')
-          ORDER BY month
+          GROUP BY DATE_FORMAT(survey_date, '${dateFormat}')
+          ORDER BY time_key
         `;
-        cropsParams = [startDate];
+        cropsParams = [startDateStr];
       }
       const cropsResult = await getPromisePool().query(cropsQuery, cropsParams);
 
-      // Create a map of all months in the last 12 months
-      const monthMap = new Map();
+      // Create a map of all periods in the requested range
+      const timeMap = new Map();
       const currentDate = new Date();
       
-      for (let i = 11; i >= 0; i--) {
-        const date = new Date(currentDate);
-        date.setMonth(date.getMonth() - i);
-        const monthKey = date.toISOString().substring(0, 7); // YYYY-MM format
-        const monthName = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        
-        monthMap.set(monthKey, {
-          month: monthName,
-          beneficiaries: 0,
-          seedlings: 0,
-          aliveCrops: 0,
-          deadCrops: 0
-        });
+      if (period === 'weekly') {
+        for (let i = 11; i >= 0; i--) {
+          const date = new Date(currentDate);
+          date.setDate(date.getDate() - i * 7);
+          const year = date.getFullYear();
+          const weekNum = this.getWeekNumber(date);
+          const timeKey = `${year}-W${String(weekNum).padStart(2, '0')}`;
+          const label = `Wk ${weekNum}, ${year}`;
+          
+          timeMap.set(timeKey, {
+            month: label,
+            beneficiaries: 0,
+            seedlings: 0,
+            aliveCrops: 0,
+            deadCrops: 0
+          });
+        }
+      } else if (period === 'yearly') {
+        for (let i = 4; i >= 0; i--) {
+          const date = new Date(currentDate);
+          date.setFullYear(date.getFullYear() - i);
+          const timeKey = String(date.getFullYear());
+          
+          timeMap.set(timeKey, {
+            month: timeKey,
+            beneficiaries: 0,
+            seedlings: 0,
+            aliveCrops: 0,
+            deadCrops: 0
+          });
+        }
+      } else {
+        // default: monthly
+        for (let i = 11; i >= 0; i--) {
+          const date = new Date(currentDate);
+          date.setMonth(date.getMonth() - i);
+          const timeKey = date.toISOString().substring(0, 7); // YYYY-MM format
+          const monthName = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          
+          timeMap.set(timeKey, {
+            month: monthName,
+            beneficiaries: 0,
+            seedlings: 0,
+            aliveCrops: 0,
+            deadCrops: 0
+          });
+        }
       }
 
       // Fill in beneficiaries data
       beneficiariesResult[0].forEach(row => {
-        if (monthMap.has(row.month)) {
-          monthMap.get(row.month).beneficiaries = row.count;
+        let key = row.time_key;
+        if (period === 'weekly' && key) {
+          const parts = key.split('-W');
+          if (parts.length === 2 && parts[1].length === 1) {
+            key = `${parts[0]}-W0${parts[1]}`;
+          }
+        }
+        if (timeMap.has(key)) {
+          timeMap.get(key).beneficiaries = row.count;
         }
       });
 
       // Fill in seedlings data
       seedlingsResult[0].forEach(row => {
-        if (monthMap.has(row.month)) {
-          monthMap.get(row.month).seedlings = row.count || 0;
+        let key = row.time_key;
+        if (period === 'weekly' && key) {
+          const parts = key.split('-W');
+          if (parts.length === 2 && parts[1].length === 1) {
+            key = `${parts[0]}-W0${parts[1]}`;
+          }
+        }
+        if (timeMap.has(key)) {
+          timeMap.get(key).seedlings = row.count || 0;
         }
       });
 
       // Fill in crop status data
       cropsResult[0].forEach(row => {
-        if (monthMap.has(row.month)) {
-          monthMap.get(row.month).aliveCrops = row.alive_count || 0;
-          monthMap.get(row.month).deadCrops = row.dead_count || 0;
+        let key = row.time_key;
+        if (period === 'weekly' && key) {
+          const parts = key.split('-W');
+          if (parts.length === 2 && parts[1].length === 1) {
+            key = `${parts[0]}-W0${parts[1]}`;
+          }
+        }
+        if (timeMap.has(key)) {
+          timeMap.get(key).aliveCrops = row.alive_count || 0;
+          timeMap.get(key).deadCrops = row.dead_count || 0;
         }
       });
 
       // Convert map to array
-      return Array.from(monthMap.values());
+      return Array.from(timeMap.values());
     } catch (error) {
       throw new Error('Failed to fetch chart data: ' + error.message);
     }

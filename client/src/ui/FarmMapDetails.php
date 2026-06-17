@@ -406,6 +406,9 @@
       }
     }
 
+    // Expose refresh function globally
+    window.refreshFarmMapDetails = fetchData;
+
     // Render list items based on active tab and query
     function renderList() {
       const query = searchInput.value.toLowerCase().trim();
@@ -550,13 +553,29 @@
       }
     }
 
-    // View all button handler
+    // View all button handler — navigate to Reports > Farm Location tab
     if (viewAllBtn) {
       viewAllBtn.addEventListener('click', () => {
-        if (window.leafletMap && window.mapPolygons && window.mapPolygons.length > 0) {
-          const group = L.featureGroup(window.mapPolygons);
-          window.leafletMap.fitBounds(group.getBounds(), { padding: [40, 40] });
-        }
+        // 1. Tell the Sidebar to highlight the Reports button
+        window.dispatchEvent(new CustomEvent('navigateToPage', {
+          detail: { page: 'reports' }
+        }));
+
+        // 2. Tell the MainContent area to show the Reports page section
+        window.dispatchEvent(new CustomEvent('navigationChanged', {
+          detail: { page: 'reports' }
+        }));
+
+        // 3. After the page section is visible, activate the Farm Location tab
+        setTimeout(() => {
+          // Click the matching tab button so it gets the active class too
+          const tabButtons = document.querySelectorAll('.table-tab-button');
+          tabButtons.forEach(btn => {
+            if (btn.textContent.trim() === 'Farm Location') {
+              btn.click();
+            }
+          });
+        }, 50);
       });
     }
 

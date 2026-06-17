@@ -280,8 +280,10 @@
 
 <script>
   let plotCoordinatesCount = 0;
+  let addPlotOnSaveSuccess = null;
   
-  function openAddFarmPlotModal(beneficiariesList = [], selectedBeneficiaryId = null) {
+  function openAddFarmPlotModal(beneficiariesList = [], selectedBeneficiaryId = null, onSaveSuccess = null) {
+    addPlotOnSaveSuccess = onSaveSuccess;
     document.getElementById('addFarmPlotModal').classList.add('active');
     
     // Reset form
@@ -431,7 +433,41 @@
     return decimal;
   }
 
-  function handleFarmPlotSubmit(e) {
+  // Detect whether coordinate string is in DMS or decimal format
+  function detectCoordinateFormat(coordString) {
+    if (!coordString) return 'decimal';
+    
+    if (coordString.includes('°') || coordString.includes("'") || coordString.includes('"')) {
+      return 'dms';
+    }
+    
+    const decimal = parseFloat(coordString);
+    if (!isNaN(decimal)) {
+      return 'decimal';
+    }
+    
+    return 'unknown';
+  }
+
+  function getPlotCoordinatesState() {
+    const coords = [];
+    const container = document.getElementById('plotCoordinatesContainer');
+    const rows = container.querySelectorAll('.add-plot-coord-row');
+    rows.forEach(row => {
+        const latInput = row.querySelector('input[name^="lat-"]');
+        const lngInput = row.querySelector('input[name^="lng-"]');
+        const elevInput = row.querySelector('input[name^="elevation-"]');
+        
+        coords.push({
+            lat: latInput ? latInput.value.trim() : '',
+            lng: lngInput ? lngInput.value.trim() : '',
+            elevation: elevInput ? elevInput.value.trim() : ''
+        });
+    });
+    return coords;
+  }
+
+  async function handleFarmPlotSubmit(e) {
     e.preventDefault();
     const errorEl = document.getElementById('plotCoordinatesError');
     errorEl.style.display = 'none';
@@ -443,28 +479,118 @@
         return;
     }
 
-    // In a real application, you would iterate over the coordinates, convert DMS -> Decimal,
-    // and submit via AJAX (fetch). For now, we simulate the save flow:
-    if (typeof ModalTypes !== 'undefined') {
-        ModalTypes.showSaving({ title: 'Saving plot...', message: 'Please wait while we save your farm plot' });
-        
-        setTimeout(() => {
-            ModalTypes.hide();
-            if (typeof AlertModal !== 'undefined') {
-                AlertModal.show({
-                    type: 'success',
-                    title: 'Plot Saved Successfully!',
-                    message: 'The farm plot has been added.',
-                    hideButton: true,
-                    autoClose: true,
-                    autoCloseDelay: 2000
-                });
+    const currentCoords = getPlotCoordinatesState();
+    const validCoords = currentCoords.filter(c => c.lat !== '' && c.lng !== '');
+    
+    if (validCoords.length < 4) {
+        errorEl.textContent = "At least 4 coordinate points are required to define a plot boundary.";
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    const convertedCoordinates = [];
+    try {
+        for (let i = 0; i < validCoords.length; i++) {
+            const coord = validCoords[i];
+            let lat, lng;
+            
+            // Validate and convert latitude
+            const latFormat = detectCoordinateFormat(coord.lat);
+            if (latFormat === 'dms') {
+                lat = dmsToDecimal(coord.lat);
+            } else if (latFormat === 'decimal') {
+                lat = parseFloat(coord.lat);
+            } else {
+                throw new Error(`Invalid latitude format at Point ${i + 1}`);
             }
-            closeAddFarmPlotModal();
-        }, 1500);
-    } else {
-        alert("Plot saved successfully!");
+            
+            // Validate and convert longitude
+            const lngFormat = detectCoordinateFormat(coord.lng);
+            if (lngFormat === 'dms') {
+                lng = dmsToDecimal(coord.lng);
+            } else if (lngFormat === 'decimal') {
+                lng = parseFloat(coord.lng);
+            } else {
+                throw new Error(`Invalid longitude format at Point ${i + 1}`);
+            }
+            
+            if (isNaN(lat) || lat < -90 || lat > 90) {
+                throw new Error(`Invalid latitude value at Point ${i + 1} (must be between -90 and 90)`);
+            }
+            if (isNaN(lng) || lng < -180 || lng > 180) {
+                throw new Error(`Invalid longitude value at Point ${i + 1} (must be between -180 and 180)`);
+            }
+            
+            const elevation = coord.elevation ? parseInt(coord.elevation, 10) : null;
+            convertedCoordinates.push({ lat, lng, elevation });
+        }
+    } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    const apiUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://localhost:5000/api';
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+        window.location.href = '../../login.php';
+        return;
+    }
+
+    if (typeof LoadingModal !== 'undefined') {
+        LoadingModal.show({ title: 'Saving...', message: 'Saving your farm plot...' });
+    }
+
+    try {
+        const response = await fetch(`${apiUrl}/farm-plots`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                beneficiaryId: benId,
+                coordinates: convertedCoordinates
+            })
+        });
+
+        // 1 second delay to simulate loading smoothly
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || errData.message || 'Failed to save farm plot');
+        }
+
+        if (typeof LoadingModal !== 'undefined') {
+            LoadingModal.hide();
+        }
+
         closeAddFarmPlotModal();
+
+        if (typeof AlertModal !== 'undefined') {
+            AlertModal.show({
+                type: 'success',
+                title: 'Plot Saved Successfully!',
+                message: 'The farm plot has been added.',
+                hideButton: true,
+                autoClose: true,
+                autoCloseDelay: 2000
+            });
+        }
+
+        if (addPlotOnSaveSuccess) {
+            addPlotOnSaveSuccess();
+        }
+        if (typeof window.refreshFarmMapDetails === 'function') {
+            window.refreshFarmMapDetails();
+        }
+    } catch (err) {
+        if (typeof LoadingModal !== 'undefined') {
+            LoadingModal.hide();
+        }
+        errorEl.textContent = err.message || 'An error occurred while saving the farm plot.';
+        errorEl.style.display = 'block';
     }
   }
 </script>

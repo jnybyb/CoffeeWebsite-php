@@ -409,7 +409,7 @@
         farmPlotsContainer.className = "farm-plots-container"; // Set flex layout class
         farmPlotsContainer.innerHTML = ben.farms.map(farm => {
           return `
-            <div class="farm-plot-indicator" title="${parseFloat(farm.hectares || 0).toFixed(2)} Hectares">
+            <div class="farm-plot-indicator" title="${parseFloat(farm.hectares || 0).toFixed(2)} Hectares" onclick="navigateToFarmPlot('${farm.id}')">
               <div class="farm-plot-icon-box">
                 <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="36" width="36" xmlns="http://www.w3.org/2000/svg"><path d="m12 8 6-3-6-3v10"></path><path d="m8 11.99-5.5 3.14a1 1 0 0 0 0 1.74l8.5 4.86a2 2 0 0 0 2 0l8.5-4.86a1 1 0 0 0 0-1.74L16 12"></path><path d="m6.49 12.85 11.02 6.3"></path><path d="M17.51 12.85 6.5 19.15"></path></svg>
               </div>
@@ -765,6 +765,58 @@
     document.getElementById('overlay').classList.add('hidden');
     document.getElementById('detailPanel').classList.add('hidden');
     document.querySelectorAll('.data-table-row').forEach(row => row.classList.remove('active'));
+  }
+
+  /**
+   * Navigate to the farm monitoring page and highlight the farm plot
+   */
+  function navigateToFarmPlot(plotId) {
+    closeDetailPanel();
+
+    // 1. Tell Sidebar to update active class to farm-monitoring
+    window.dispatchEvent(new CustomEvent('navigateToPage', {
+      detail: { page: 'farm-monitoring' }
+    }));
+
+    // 2. Tell MainContent to display farm-monitoring
+    window.dispatchEvent(new CustomEvent('navigationChanged', {
+      detail: { page: 'farm-monitoring' }
+    }));
+
+    // 3. Focus on the farm plot on the map and select the card in the list
+    setTimeout(() => {
+      if (window.allFarmPlots) {
+        const plot = window.allFarmPlots.find(p => String(p.id) === String(plotId));
+        if (plot) {
+          // Switch to Farms tab to make farm cards visible
+          const tabFarmsBtn = document.getElementById('tabFarmsBtn');
+          if (tabFarmsBtn) {
+            tabFarmsBtn.click();
+          }
+
+          // Highlight and scroll to the card element (without clicking to avoid opening the modal)
+          const cards = document.querySelectorAll('.md-card');
+          cards.forEach(card => {
+            const cardName = card.querySelector('.md-name');
+            if (cardName && cardName.textContent.trim() === String(plotId)) {
+              document.querySelectorAll('.md-card').forEach(c => c.classList.remove('active'));
+              card.classList.add('active');
+              card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          });
+
+          // Focus Leaflet map and open the plot popup indicator on the map
+          if (window.leafletMap && plot.polygon) {
+            window.leafletMap.fitBounds(plot.polygon.getBounds(), { padding: [50, 50] });
+            if (plot.marker) {
+              plot.marker.openPopup();
+            } else {
+              plot.polygon.openPopup();
+            }
+          }
+        }
+      }
+    }, 150);
   }
 
   /**
