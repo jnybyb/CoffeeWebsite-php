@@ -4,7 +4,7 @@
  * Renders navigation tabs for different report types with search, filter, and export functionality
  */
 
-$activeTab = $activeTab ?? 'Beneficiary List';
+$activeTab = $activeTab ?? '';
 $tabs = ['Beneficiary List', 'Farm Location', 'Seedling Record', 'Crop Survey Status', 'Recent Activities'];
 ?>
 
@@ -203,7 +203,7 @@ $tabs = ['Beneficiary List', 'Farm Location', 'Seedling Record', 'Crop Survey St
     
     <!-- Filter Toggle Button -->
     <button class="table-tabs-btn" id="ttFilterBtn" onclick="toggleFilter()">
-      <img src="../../assets/icons/filter.png" alt="Filter" style="width: 12px; height: 12px; object-fit: contain;" />
+      <img id="ttFilterIcon" src="../../assets/icons/filter.png" alt="Filter" style="width: 12px; height: 12px; object-fit: contain;" />
       <span id="ttFilterText">Add Filter</span>
     </button>
 
@@ -255,13 +255,18 @@ $tabs = ['Beneficiary List', 'Farm Location', 'Seedling Record', 'Crop Survey St
     isTableFilterActive = !isTableFilterActive;
     const filterBtn = document.getElementById('ttFilterBtn');
     const filterText = document.getElementById('ttFilterText');
+    const filterIcon = document.getElementById('ttFilterIcon');
     
     if (isTableFilterActive) {
       filterBtn.classList.add('table-tabs-btn-active');
       filterText.innerText = 'Clear Filter';
+      filterIcon.src = '../../assets/icons/clear-filter.png';
+      filterIcon.alt = 'Clear Filter';
     } else {
       filterBtn.classList.remove('table-tabs-btn-active');
       filterText.innerText = 'Add Filter';
+      filterIcon.src = '../../assets/icons/filter.png';
+      filterIcon.alt = 'Filter';
     }
     
     // Dispatch event

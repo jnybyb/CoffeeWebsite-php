@@ -224,6 +224,11 @@
       <div style="padding: 1rem 1rem 0 1rem; border-bottom: 1px solid var(--border-gray, #e6e6e6);">
         <?php include __DIR__ . '/../ui/ReportTableTabs.php'; ?>
       </div>
+
+      <!-- Filter Section (JS-driven, toggleable) -->
+      <div id="reportsFilterSectionContainer" style="padding: 0.5rem 1rem 0 1rem; display: none; border-bottom: 1px solid var(--border-gray, #e6e6e6);">
+        <?php include __DIR__ . '/../ui/FilterSection.php'; ?>
+      </div>
       
       <!-- Dynamic Table Area (JS-driven) -->
       <div id="reportDynamicTable" style="flex: 1; overflow-y: auto;">
@@ -243,6 +248,7 @@
   const API_BASE = 'http://localhost:5000/api';
   let currentTab = null;
   let searchQuery = '';
+  let activeFilters = null;
   
   // Data caches for local fast search/filtering
   let allFarmPlots = [];
@@ -250,6 +256,13 @@
   let allSeedlings = [];
   let allCropStatusList = [];
   let allRecentActivities = [];
+
+  function isColumnVisible(attrId) {
+    if (!activeFilters || !activeFilters.selectedAttributes || activeFilters.selectedAttributes.length === 0) {
+      return true;
+    }
+    return activeFilters.selectedAttributes.includes(attrId);
+  }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -359,25 +372,50 @@
       return;
     }
 
+    let filtered = beneficiaries;
     const query = searchQuery.toLowerCase().trim();
-    const filtered = query
-      ? beneficiaries.filter(b => {
-          const fullName = `${b.firstName || ''} ${b.middleName || ''} ${b.lastName || ''}`.toLowerCase();
-          const address = [b.purok, b.barangay, b.municipality, b.province].filter(p => p).join(', ').toLowerCase();
-          return (
-            (b.beneficiaryId || '').toLowerCase().includes(query) ||
-            fullName.includes(query) ||
-            (b.cellphone || '').toLowerCase().includes(query) ||
-            address.includes(query)
-          );
-        })
-      : beneficiaries;
+    if (query) {
+      filtered = filtered.filter(b => {
+        const fullName = `${b.firstName || ''} ${b.middleName || ''} ${b.lastName || ''}`.toLowerCase();
+        const address = [b.purok, b.barangay, b.municipality, b.province].filter(p => p).join(', ').toLowerCase();
+        return (
+          (b.beneficiaryId || '').toLowerCase().includes(query) ||
+          fullName.includes(query) ||
+          (b.cellphone || '').toLowerCase().includes(query) ||
+          address.includes(query)
+        );
+      });
+    }
+
+    if (activeFilters) {
+      if (activeFilters.selectedGender) {
+        filtered = filtered.filter(b => b.gender === activeFilters.selectedGender);
+      }
+      if (activeFilters.selectedMaritalStatus) {
+        filtered = filtered.filter(b => b.maritalStatus === activeFilters.selectedMaritalStatus);
+      }
+      if (activeFilters.dateFrom) {
+        const fromDate = new Date(activeFilters.dateFrom);
+        filtered = filtered.filter(b => b.birthDate && new Date(b.birthDate) >= fromDate);
+      }
+      if (activeFilters.dateTo) {
+        const toDate = new Date(activeFilters.dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        filtered = filtered.filter(b => b.birthDate && new Date(b.birthDate) <= toDate);
+      }
+      if (activeFilters.selectedProvince) {
+        filtered = filtered.filter(b => b.province === activeFilters.selectedProvince);
+      }
+      if (activeFilters.selectedMunicipality) {
+        filtered = filtered.filter(b => b.municipality === activeFilters.selectedMunicipality);
+      }
+    }
 
     if (filtered.length === 0) {
       getTableContainer().innerHTML = `
         <div class="report-empty-state">
-          <h3>No results for "${searchQuery}"</h3>
-          <p>Try a different search term.</p>
+          <h3>No results found</h3>
+          <p>Try different search or filter options.</p>
         </div>`;
       return;
     }
@@ -389,14 +427,14 @@
       return `
         <tr>
           <td>${idx + 1}</td>
-          <td class="plot-id-cell">${formatNull(b.beneficiaryId)}</td>
-          <td class="beneficiary-cell">${formatNull(fullName)}</td>
-          <td>${formatNull(b.gender)}</td>
-          <td>${formatNull(b.maritalStatus)}</td>
-          <td>${formatDate(b.birthDate)}</td>
-          <td>${b.age ? b.age : '<span class="em-dash">&mdash;</span>'}</td>
-          <td>${formatNull(b.cellphone)}</td>
-          <td>${formatNull(address)}</td>
+          ${isColumnVisible('ben_id') ? `<td class="plot-id-cell">${formatNull(b.beneficiaryId)}</td>` : ''}
+          ${isColumnVisible('ben_fullname') ? `<td class="beneficiary-cell">${formatNull(fullName)}</td>` : ''}
+          ${isColumnVisible('ben_gender') ? `<td>${formatNull(b.gender)}</td>` : ''}
+          ${isColumnVisible('ben_marital') ? `<td>${formatNull(b.maritalStatus)}</td>` : ''}
+          ${isColumnVisible('ben_birthdate') ? `<td>${formatDate(b.birthDate)}</td>` : ''}
+          ${isColumnVisible('ben_age') ? `<td>${b.age ? b.age : '<span class="em-dash">&mdash;</span>'}</td>` : ''}
+          ${isColumnVisible('ben_cellphone') ? `<td>${formatNull(b.cellphone)}</td>` : ''}
+          ${isColumnVisible('ben_address') ? `<td>${formatNull(address)}</td>` : ''}
         </tr>`;
     }).join('');
 
@@ -405,14 +443,14 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Beneficiary ID</th>
-            <th>Full Name</th>
-            <th>Gender</th>
-            <th>Marital Status</th>
-            <th>Birth Date</th>
-            <th>Age</th>
-            <th>Cellphone</th>
-            <th>Address</th>
+            ${isColumnVisible('ben_id') ? '<th>Beneficiary ID</th>' : ''}
+            ${isColumnVisible('ben_fullname') ? '<th>Full Name</th>' : ''}
+            ${isColumnVisible('ben_gender') ? '<th>Gender</th>' : ''}
+            ${isColumnVisible('ben_marital') ? '<th>Marital Status</th>' : ''}
+            ${isColumnVisible('ben_birthdate') ? '<th>Birth Date</th>' : ''}
+            ${isColumnVisible('ben_age') ? '<th>Age</th>' : ''}
+            ${isColumnVisible('ben_cellphone') ? '<th>Cellphone</th>' : ''}
+            ${isColumnVisible('ben_address') ? '<th>Address</th>' : ''}
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -446,21 +484,39 @@
       return;
     }
 
+    let filtered = plots;
     const query = searchQuery.toLowerCase().trim();
-    const filtered = query
-      ? plots.filter(p =>
-          (p.id || '').toLowerCase().includes(query) ||
-          (p.beneficiaryName || '').toLowerCase().includes(query) ||
-          (p.address || '').toLowerCase().includes(query) ||
-          (p.beneficiaryId || '').toLowerCase().includes(query)
-        )
-      : plots;
+    if (query) {
+      filtered = filtered.filter(p =>
+        (p.id || '').toLowerCase().includes(query) ||
+        (p.beneficiaryName || '').toLowerCase().includes(query) ||
+        (p.address || '').toLowerCase().includes(query) ||
+        (p.beneficiaryId || '').toLowerCase().includes(query)
+      );
+    }
+
+    if (activeFilters) {
+      if (activeFilters.hectaresMin) {
+        const minH = parseFloat(activeFilters.hectaresMin);
+        filtered = filtered.filter(p => p.hectares != null && parseFloat(p.hectares) >= minH);
+      }
+      if (activeFilters.hectaresMax) {
+        const maxH = parseFloat(activeFilters.hectaresMax);
+        filtered = filtered.filter(p => p.hectares != null && parseFloat(p.hectares) <= maxH);
+      }
+      if (activeFilters.selectedProvince) {
+        filtered = filtered.filter(p => p.address && p.address.toLowerCase().includes(activeFilters.selectedProvince.toLowerCase()));
+      }
+      if (activeFilters.selectedMunicipality) {
+        filtered = filtered.filter(p => p.address && p.address.toLowerCase().includes(activeFilters.selectedMunicipality.toLowerCase()));
+      }
+    }
 
     if (filtered.length === 0) {
       getTableContainer().innerHTML = `
         <div class="report-empty-state">
-          <h3>No results for "${searchQuery}"</h3>
-          <p>Try a different search term.</p>
+          <h3>No results found</h3>
+          <p>Try different search or filter options.</p>
         </div>`;
       return;
     }
@@ -476,11 +532,11 @@
       return `
         <tr>
           <td>${idx + 1}</td>
-          <td class="plot-id-cell">${plot.id || '&mdash;'}</td>
-          <td class="beneficiary-cell">${plot.beneficiaryName || '&mdash;'}</td>
-          <td>${hectares}</td>
-          <td>${cleanAddr}</td>
-          <td>${coords}</td>
+          ${isColumnVisible('farm_plot_id') ? `<td class="plot-id-cell">${plot.id || '&mdash;'}</td>` : ''}
+          ${isColumnVisible('farm_beneficiary') ? `<td class="beneficiary-cell">${plot.beneficiaryName || '&mdash;'}</td>` : ''}
+          ${isColumnVisible('farm_hectares') ? `<td>${hectares}</td>` : ''}
+          ${isColumnVisible('farm_address') ? `<td>${cleanAddr}</td>` : ''}
+          ${isColumnVisible('farm_coordinates') ? `<td>${coords}</td>` : ''}
         </tr>`;
     }).join('');
 
@@ -489,11 +545,11 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Plot ID</th>
-            <th>Beneficiary</th>
-            <th>Hectares</th>
-            <th>Address</th>
-            <th>Coordinates</th>
+            ${isColumnVisible('farm_plot_id') ? '<th>Plot ID</th>' : ''}
+            ${isColumnVisible('farm_beneficiary') ? '<th>Beneficiary</th>' : ''}
+            ${isColumnVisible('farm_hectares') ? '<th>Hectares</th>' : ''}
+            ${isColumnVisible('farm_address') ? '<th>Address</th>' : ''}
+            ${isColumnVisible('farm_coordinates') ? '<th>Coordinates</th>' : ''}
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -527,19 +583,32 @@
       return;
     }
 
+    let filtered = seedlings;
     const query = searchQuery.toLowerCase().trim();
-    const filtered = query
-      ? seedlings.filter(s =>
-          (s.beneficiaryId || '').toLowerCase().includes(query) ||
-          (s.plotId || '').toLowerCase().includes(query)
-        )
-      : seedlings;
+    if (query) {
+      filtered = filtered.filter(s =>
+        (s.beneficiaryId || '').toLowerCase().includes(query) ||
+        (s.plotId || '').toLowerCase().includes(query)
+      );
+    }
+
+    if (activeFilters) {
+      if (activeFilters.dateFrom) {
+        const fromDate = new Date(activeFilters.dateFrom);
+        filtered = filtered.filter(s => s.dateReceived && new Date(s.dateReceived) >= fromDate);
+      }
+      if (activeFilters.dateTo) {
+        const toDate = new Date(activeFilters.dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        filtered = filtered.filter(s => s.dateReceived && new Date(s.dateReceived) <= toDate);
+      }
+    }
 
     if (filtered.length === 0) {
       getTableContainer().innerHTML = `
         <div class="report-empty-state">
-          <h3>No results for "${searchQuery}"</h3>
-          <p>Try a different search term.</p>
+          <h3>No results found</h3>
+          <p>Try different search or filter options.</p>
         </div>`;
       return;
     }
@@ -549,13 +618,14 @@
       return `
         <tr>
           <td>${idx + 1}</td>
-          <td class="beneficiary-cell">${formatNull(s.beneficiaryId)}</td>
-          <td>${s.received}</td>
-          <td>${formatDate(s.dateReceived)}</td>
-          <td>${s.planted}</td>
-          <td>${plotIdVal}</td>
-          <td>${formatDate(s.dateOfPlantingStart)}</td>
-          <td>${formatDate(s.dateOfPlantingEnd)}</td>
+          ${isColumnVisible('seed_id') && filtered.some(item => item.id) ? `<td>${s.id || '&mdash;'}</td>` : ''}
+          ${isColumnVisible('seed_ben_id') ? `<td class="beneficiary-cell">${formatNull(s.beneficiaryId)}</td>` : ''}
+          ${isColumnVisible('seed_received') ? `<td>${s.received}</td>` : ''}
+          ${isColumnVisible('seed_date_received') ? `<td>${formatDate(s.dateReceived)}</td>` : ''}
+          ${isColumnVisible('seed_planted') ? `<td>${s.planted}</td>` : ''}
+          ${isColumnVisible('seed_plot_id') ? `<td>${plotIdVal}</td>` : ''}
+          ${isColumnVisible('seed_planting_date') ? `<td>${formatDate(s.dateOfPlantingStart)}</td>` : ''}
+          ${isColumnVisible('seed_planting_date') ? `<td>${formatDate(s.dateOfPlantingEnd)}</td>` : ''}
         </tr>`;
     }).join('');
 
@@ -564,13 +634,14 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Beneficiary ID</th>
-            <th>Received</th>
-            <th>Date Received</th>
-            <th>Planted</th>
-            <th>Plot ID</th>
-            <th>Planting Date</th>
-            <th>End Date</th>
+            ${isColumnVisible('seed_id') && filtered.some(item => item.id) ? '<th>Seedling ID</th>' : ''}
+            ${isColumnVisible('seed_ben_id') ? '<th>Beneficiary ID</th>' : ''}
+            ${isColumnVisible('seed_received') ? '<th>Received</th>' : ''}
+            ${isColumnVisible('seed_date_received') ? '<th>Date Received</th>' : ''}
+            ${isColumnVisible('seed_planted') ? '<th>Planted</th>' : ''}
+            ${isColumnVisible('seed_plot_id') ? '<th>Plot ID</th>' : ''}
+            ${isColumnVisible('seed_planting_date') ? '<th>Planting Date</th>' : ''}
+            ${isColumnVisible('seed_planting_date') ? '<th>End Date</th>' : ''}
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -604,21 +675,34 @@
       return;
     }
 
+    let filtered = cropStatusList;
     const query = searchQuery.toLowerCase().trim();
-    const filtered = query
-      ? cropStatusList.filter(c =>
-          (c.beneficiaryId || '').toLowerCase().includes(query) ||
-          (c.beneficiaryName || '').toLowerCase().includes(query) ||
-          (c.surveyer || '').toLowerCase().includes(query) ||
-          (c.plotId || '').toLowerCase().includes(query)
-        )
-      : cropStatusList;
+    if (query) {
+      filtered = filtered.filter(c =>
+        (c.beneficiaryId || '').toLowerCase().includes(query) ||
+        (c.beneficiaryName || '').toLowerCase().includes(query) ||
+        (c.surveyer || '').toLowerCase().includes(query) ||
+        (c.plotId || '').toLowerCase().includes(query)
+      );
+    }
+
+    if (activeFilters) {
+      if (activeFilters.dateFrom) {
+        const fromDate = new Date(activeFilters.dateFrom);
+        filtered = filtered.filter(c => c.surveyDate && new Date(c.surveyDate) >= fromDate);
+      }
+      if (activeFilters.dateTo) {
+        const toDate = new Date(activeFilters.dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        filtered = filtered.filter(c => c.surveyDate && new Date(c.surveyDate) <= toDate);
+      }
+    }
 
     if (filtered.length === 0) {
       getTableContainer().innerHTML = `
         <div class="report-empty-state">
-          <h3>No results for "${searchQuery}"</h3>
-          <p>Try a different search term.</p>
+          <h3>No results found</h3>
+          <p>Try different search or filter options.</p>
         </div>`;
       return;
     }
@@ -628,13 +712,14 @@
       return `
         <tr>
           <td>${idx + 1}</td>
-          <td class="plot-id-cell">${formatNull(c.beneficiaryId)}</td>
-          <td class="beneficiary-cell">${formatNull(c.beneficiaryName)}</td>
-          <td>${formatDate(c.surveyDate)}</td>
-          <td>${formatNull(c.surveyer)}</td>
-          <td>${c.aliveCrops}</td>
-          <td>${c.deadCrops}</td>
-          <td>${plotIdVal}</td>
+          ${isColumnVisible('crop_id') && filtered.some(item => item.id) ? `<td>${c.id || '&mdash;'}</td>` : ''}
+          ${isColumnVisible('crop_ben_id') ? `<td class="plot-id-cell">${formatNull(c.beneficiaryId)}</td>` : ''}
+          ${isColumnVisible('crop_beneficiary') ? `<td class="beneficiary-cell">${formatNull(c.beneficiaryName)}</td>` : ''}
+          ${isColumnVisible('crop_survey_date') ? `<td>${formatDate(c.surveyDate)}</td>` : ''}
+          ${isColumnVisible('crop_surveyer') ? `<td>${formatNull(c.surveyer)}</td>` : ''}
+          ${isColumnVisible('crop_alive') ? `<td>${c.aliveCrops}</td>` : ''}
+          ${isColumnVisible('crop_dead') ? `<td>${c.deadCrops}</td>` : ''}
+          ${isColumnVisible('crop_plot') ? `<td>${plotIdVal}</td>` : ''}
         </tr>`;
     }).join('');
 
@@ -643,13 +728,14 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Beneficiary ID</th>
-            <th>Beneficiary Name</th>
-            <th>Survey Date</th>
-            <th>Surveyer</th>
-            <th>Alive Crops</th>
-            <th>Dead Crops</th>
-            <th>Plot</th>
+            ${isColumnVisible('crop_id') && filtered.some(item => item.id) ? '<th>Survey ID</th>' : ''}
+            ${isColumnVisible('crop_ben_id') ? '<th>Beneficiary ID</th>' : ''}
+            ${isColumnVisible('crop_beneficiary') ? '<th>Beneficiary Name</th>' : ''}
+            ${isColumnVisible('crop_survey_date') ? '<th>Survey Date</th>' : ''}
+            ${isColumnVisible('crop_surveyer') ? '<th>Surveyer</th>' : ''}
+            ${isColumnVisible('crop_alive') ? '<th>Alive Crops</th>' : ''}
+            ${isColumnVisible('crop_dead') ? '<th>Dead Crops</th>' : ''}
+            ${isColumnVisible('crop_plot') ? '<th>Plot</th>' : ''}
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -682,20 +768,33 @@
       return;
     }
 
+    let filtered = activities;
     const query = searchQuery.toLowerCase().trim();
-    const filtered = query
-      ? activities.filter(a =>
-          (a.type || '').toLowerCase().includes(query) ||
-          (a.action || '').toLowerCase().includes(query) ||
-          (a.user || '').toLowerCase().includes(query)
-        )
-      : activities;
+    if (query) {
+      filtered = filtered.filter(a =>
+        (a.type || '').toLowerCase().includes(query) ||
+        (a.action || '').toLowerCase().includes(query) ||
+        (a.user || '').toLowerCase().includes(query)
+      );
+    }
+
+    if (activeFilters) {
+      if (activeFilters.dateFrom) {
+        const fromDate = new Date(activeFilters.dateFrom);
+        filtered = filtered.filter(a => a.timestamp && new Date(a.timestamp) >= fromDate);
+      }
+      if (activeFilters.dateTo) {
+        const toDate = new Date(activeFilters.dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        filtered = filtered.filter(a => a.timestamp && new Date(a.timestamp) <= toDate);
+      }
+    }
 
     if (filtered.length === 0) {
       getTableContainer().innerHTML = `
         <div class="report-empty-state">
-          <h3>No results for "${searchQuery}"</h3>
-          <p>Try a different search term.</p>
+          <h3>No results found</h3>
+          <p>Try different search or filter options.</p>
         </div>`;
       return;
     }
@@ -712,10 +811,11 @@
       return `
         <tr>
           <td>${idx + 1}</td>
-          <td class="beneficiary-cell" style="font-weight: 600;">${typeLabel}</td>
-          <td>${a.action}</td>
-          <td>${formatDateTime(a.timestamp)}</td>
-          <td>${formatNull(a.user)}</td>
+          ${isColumnVisible('act_id') && filtered.some(item => item.id) ? `<td>${a.id || '&mdash;'}</td>` : ''}
+          ${isColumnVisible('act_type') ? `<td class="beneficiary-cell" style="font-weight: 600;">${typeLabel}</td>` : ''}
+          ${isColumnVisible('act_action') ? `<td>${a.action}</td>` : ''}
+          ${isColumnVisible('act_timestamp') ? `<td>${formatDateTime(a.timestamp)}</td>` : ''}
+          ${isColumnVisible('act_user') ? `<td>${formatNull(a.user)}</td>` : ''}
         </tr>`;
     }).join('');
 
@@ -724,10 +824,11 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Type</th>
-            <th>Action</th>
-            <th>Timestamp</th>
-            <th>User</th>
+            ${isColumnVisible('act_id') && filtered.some(item => item.id) ? '<th>Activity ID</th>' : ''}
+            ${isColumnVisible('act_type') ? '<th>Type</th>' : ''}
+            ${isColumnVisible('act_action') ? '<th>Action</th>' : ''}
+            ${isColumnVisible('act_timestamp') ? '<th>Timestamp</th>' : ''}
+            ${isColumnVisible('act_user') ? '<th>User</th>' : ''}
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -739,6 +840,7 @@
   function handleTabChange(tab) {
     currentTab = tab;
     searchQuery = '';
+    activeFilters = null;
     
     // Clear search input visually
     const searchEl = document.getElementById('ttSearchInput');
@@ -770,14 +872,263 @@
     }
   }
 
-  // ── Event Listeners ───────────────────────────────────────────────────────
+  async function loadAllAndRenderConsolidatedTable() {
+    showSpinner();
+    const token = getToken();
+    if (!token) return;
 
-  document.addEventListener('tableTabChanged', (e) => {
-    handleTabChange(e.detail.tab);
-  });
+    try {
+      const [resBen, resPlots, resSeed, resCrop, resAct] = await Promise.all([
+        fetch(`${API_BASE}/beneficiaries`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/farm-plots`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/seedlings`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/crop-status`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/statistics/recent-activities?limit=100`, { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
 
-  document.addEventListener('tableSearchChanged', (e) => {
-    searchQuery = e.detail.query || '';
+      const [jsonBen, jsonPlots, jsonSeed, jsonCrop, jsonAct] = await Promise.all([
+        resBen.json(),
+        resPlots.json(),
+        resSeed.json(),
+        resCrop.json(),
+        resAct.json()
+      ]);
+
+      allBeneficiaries = Array.isArray(jsonBen) ? jsonBen : (Array.isArray(jsonBen.data) ? jsonBen.data : []);
+      allFarmPlots = Array.isArray(jsonPlots) ? jsonPlots : [];
+      allSeedlings = Array.isArray(jsonSeed) ? jsonSeed : [];
+      allCropStatusList = Array.isArray(jsonCrop) ? jsonCrop : [];
+      allRecentActivities = Array.isArray(jsonAct) ? jsonAct : [];
+
+      renderConsolidatedTable();
+    } catch (err) {
+      console.error(err);
+      getTableContainer().innerHTML = `
+        <div class="report-empty-state">
+          <h3>Error loading database records</h3>
+          <p>Please try again later.</p>
+        </div>`;
+    }
+  }
+
+  function renderConsolidatedTable() {
+    const allCols = [
+      { id: 'ben_id', header: 'Beneficiary ID', value: item => formatNull(item.ben_id) },
+      { id: 'ben_fullname', header: 'Full Name', value: item => formatNull(item.ben_fullname) },
+      { id: 'ben_gender', header: 'Gender', value: item => formatNull(item.ben_gender) },
+      { id: 'ben_marital', header: 'Marital Status', value: item => formatNull(item.ben_marital) },
+      { id: 'ben_birthdate', header: 'Birth Date', value: item => formatDate(item.ben_birthdate) },
+      { id: 'ben_age', header: 'Age', value: item => item.ben_age ? item.ben_age : '<span class="em-dash">&mdash;</span>' },
+      { id: 'ben_cellphone', header: 'Cellphone', value: item => formatNull(item.ben_cellphone) },
+      { id: 'ben_address', header: 'Address', value: item => formatNull(item.ben_address) },
+
+      { id: 'farm_plot_id', header: 'Plot ID', value: item => formatNull(item.farm_plot_id) },
+      { id: 'farm_beneficiary', header: 'Beneficiary Name', value: item => formatNull(item.farm_beneficiary) },
+      { id: 'farm_hectares', header: 'Hectares', value: item => item.farm_hectares != null ? parseFloat(item.farm_hectares).toFixed(2) + ' ha' : '<span class="em-dash">&mdash;</span>' },
+      { id: 'farm_address', header: 'Plot Address', value: item => formatNull(item.farm_address) },
+      { id: 'farm_coordinates', header: 'Coordinates', value: item => Array.isArray(item.farm_coordinates) && item.farm_coordinates.length > 0 ? `<span class="coord-badge">${item.farm_coordinates.length} points</span>` : '<span class="em-dash">&mdash;</span>' },
+
+      { id: 'seed_id', header: 'Seedling ID', value: item => formatNull(item.seed_id) },
+      { id: 'seed_ben_id', header: 'Seedling Ben ID', value: item => formatNull(item.seed_ben_id) },
+      { id: 'seed_received', header: 'Received', value: item => formatNull(item.seed_received) },
+      { id: 'seed_date_received', header: 'Date Received', value: item => formatDate(item.seed_date_received) },
+      { id: 'seed_planted', header: 'Planted', value: item => formatNull(item.seed_planted) },
+      { id: 'seed_plot_id', header: 'Seedling Plot ID', value: item => formatNull(item.seed_plot_id) },
+      { id: 'seed_planting_date', header: 'Planting Date', value: item => formatDate(item.seed_planting_date) },
+
+      { id: 'crop_id', header: 'Survey ID', value: item => formatNull(item.crop_id) },
+      { id: 'crop_ben_id', header: 'Survey Ben ID', value: item => formatNull(item.crop_ben_id) },
+      { id: 'crop_beneficiary', header: 'Survey Beneficiary', value: item => formatNull(item.crop_beneficiary) },
+      { id: 'crop_survey_date', header: 'Survey Date', value: item => formatDate(item.crop_survey_date) },
+      { id: 'crop_surveyer', header: 'Surveyer', value: item => formatNull(item.crop_surveyer) },
+      { id: 'crop_alive', header: 'Alive Crops', value: item => formatNull(item.crop_alive) },
+      { id: 'crop_dead', header: 'Dead Crops', value: item => formatNull(item.crop_dead) },
+      { id: 'crop_plot', header: 'Survey Plot', value: item => formatNull(item.crop_plot) },
+
+      { id: 'act_id', header: 'Activity ID', value: item => formatNull(item.act_id) },
+      { id: 'act_type', header: 'Activity Type', value: item => formatNull(item.act_type) },
+      { id: 'act_action', header: 'Action', value: item => formatNull(item.act_action) },
+      { id: 'act_timestamp', header: 'Timestamp', value: item => formatDateTime(item.act_timestamp) },
+      { id: 'act_user', header: 'User', value: item => formatNull(item.act_user) }
+    ];
+
+    let visibleCols = [];
+    if (activeFilters && activeFilters.selectedAttributes && activeFilters.selectedAttributes.length > 0) {
+      visibleCols = allCols.filter(col => activeFilters.selectedAttributes.includes(col.id));
+    } else {
+      // Default consolidated view columns
+      const defaultIds = ['ben_id', 'ben_fullname', 'farm_plot_id', 'farm_hectares', 'seed_received', 'seed_planted', 'crop_alive', 'crop_dead'];
+      visibleCols = allCols.filter(col => defaultIds.includes(col.id));
+    }
+
+    const consolidatedList = [];
+    const benMap = {};
+    allBeneficiaries.forEach(b => {
+      benMap[b.beneficiaryId] = b;
+    });
+
+    const benWithPlots = new Set();
+    allFarmPlots.forEach(plot => {
+      const b = benMap[plot.beneficiaryId] || {};
+      benWithPlots.add(plot.beneficiaryId);
+
+      const plotSeedlings = allSeedlings.filter(s => s.plotId === plot.id);
+      const plotCrops = allCropStatusList.filter(c => c.plotId === plot.id);
+
+      const totalReceived = plotSeedlings.reduce((sum, s) => sum + parseInt(s.received || 0), 0);
+      const totalPlanted = plotSeedlings.reduce((sum, s) => sum + parseInt(s.planted || 0), 0);
+      const totalAlive = plotCrops.reduce((sum, c) => sum + parseInt(c.aliveCrops || 0), 0);
+      const totalDead = plotCrops.reduce((sum, c) => sum + parseInt(c.deadCrops || 0), 0);
+
+      const rawAddr = (plot.address || '').split(',').map(s => s.trim());
+      const cleanPlotAddr = rawAddr.filter(s => s && s.toLowerCase() !== 'unknown').join(', ');
+
+      const fullName = b.firstName ? `${b.firstName} ${b.middleName ? b.middleName + ' ' : ''}${b.lastName}` : (plot.beneficiaryName || '');
+      const benAddr = [b.purok, b.barangay, b.municipality, b.province].filter(p => p && p.trim() !== '').join(', ');
+
+      consolidatedList.push({
+        ben_id: b.beneficiaryId || plot.beneficiaryId || null,
+        ben_fullname: fullName || null,
+        ben_gender: b.gender || null,
+        ben_marital: b.maritalStatus || null,
+        ben_birthdate: b.birthDate || null,
+        ben_age: b.age || null,
+        ben_cellphone: b.cellphone || null,
+        ben_address: benAddr || null,
+
+        farm_plot_id: plot.id || null,
+        farm_beneficiary: plot.beneficiaryName || fullName || null,
+        farm_hectares: plot.hectares || null,
+        farm_address: cleanPlotAddr || benAddr || null,
+        farm_coordinates: plot.coordinates || null,
+
+        seed_id: plotSeedlings.length > 0 ? plotSeedlings[0].id : null,
+        seed_ben_id: plotSeedlings.length > 0 ? plotSeedlings[0].beneficiaryId : null,
+        seed_received: totalReceived || null,
+        seed_date_received: plotSeedlings.length > 0 ? plotSeedlings[0].dateReceived : null,
+        seed_planted: totalPlanted || null,
+        seed_plot_id: plotSeedlings.length > 0 ? plotSeedlings[0].plotId : null,
+        seed_planting_date: plotSeedlings.length > 0 ? plotSeedlings[0].dateOfPlantingStart : null,
+
+        crop_id: plotCrops.length > 0 ? plotCrops[0].id : null,
+        crop_ben_id: plotCrops.length > 0 ? plotCrops[0].beneficiaryId : null,
+        crop_beneficiary: plotCrops.length > 0 ? plotCrops[0].beneficiaryName : null,
+        crop_survey_date: plotCrops.length > 0 ? plotCrops[0].surveyDate : null,
+        crop_surveyer: plotCrops.length > 0 ? plotCrops[0].surveyer : null,
+        crop_alive: totalAlive || null,
+        crop_dead: totalDead || null,
+        crop_plot: plotCrops.length > 0 ? plotCrops[0].plotId : null
+      });
+    });
+
+    allBeneficiaries.forEach(b => {
+      if (benWithPlots.has(b.beneficiaryId)) return;
+
+      const fullName = `${b.firstName || ''} ${b.middleName ? b.middleName + ' ' : ''}${b.lastName || ''}`.replace(/\s+/g, ' ').trim();
+      const benAddr = [b.purok, b.barangay, b.municipality, b.province].filter(p => p && p.trim() !== '').join(', ');
+
+      consolidatedList.push({
+        ben_id: b.beneficiaryId || null,
+        ben_fullname: fullName || null,
+        ben_gender: b.gender || null,
+        ben_marital: b.maritalStatus || null,
+        ben_birthdate: b.birthDate || null,
+        ben_age: b.age || null,
+        ben_cellphone: b.cellphone || null,
+        ben_address: benAddr || null,
+
+        farm_plot_id: null,
+        farm_beneficiary: null,
+        farm_hectares: null,
+        farm_address: null,
+        farm_coordinates: null,
+
+        seed_id: null,
+        seed_ben_id: null,
+        seed_received: null,
+        seed_date_received: null,
+        seed_planted: null,
+        seed_plot_id: null,
+        seed_planting_date: null,
+
+        crop_id: null,
+        crop_ben_id: null,
+        crop_beneficiary: null,
+        crop_survey_date: null,
+        crop_surveyer: null,
+        crop_alive: null,
+        crop_dead: null,
+        crop_plot: null
+      });
+    });
+
+    let filtered = consolidatedList;
+    const query = searchQuery.toLowerCase().trim();
+    if (query) {
+      filtered = filtered.filter(item => 
+        (item.ben_id || '').toLowerCase().includes(query) ||
+        (item.ben_fullname || '').toLowerCase().includes(query) ||
+        (item.farm_plot_id || '').toLowerCase().includes(query) ||
+        (item.farm_address || '').toLowerCase().includes(query)
+      );
+    }
+
+    if (activeFilters) {
+      if (activeFilters.selectedProvince) {
+        filtered = filtered.filter(item => 
+          (item.ben_address && item.ben_address.toLowerCase().includes(activeFilters.selectedProvince.toLowerCase())) ||
+          (item.farm_address && item.farm_address.toLowerCase().includes(activeFilters.selectedProvince.toLowerCase()))
+        );
+      }
+      if (activeFilters.selectedMunicipality) {
+        filtered = filtered.filter(item => 
+          (item.ben_address && item.ben_address.toLowerCase().includes(activeFilters.selectedMunicipality.toLowerCase())) ||
+          (item.farm_address && item.farm_address.toLowerCase().includes(activeFilters.selectedMunicipality.toLowerCase()))
+        );
+      }
+    }
+
+    if (filtered.length === 0) {
+      getTableContainer().innerHTML = `
+        <div class="report-empty-state">
+          <h3>No results found</h3>
+          <p>Try different search or filter options.</p>
+        </div>`;
+      return;
+    }
+
+    const headerHtml = visibleCols.map(col => `<th>${col.header}</th>`).join('');
+    const rowsHtml = filtered.map((item, idx) => {
+      const tdHtml = visibleCols.map(col => `<td>${col.value(item)}</td>`).join('');
+      return `<tr><td>${idx + 1}</td>${tdHtml}</tr>`;
+    }).join('');
+
+    getTableContainer().innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            ${headerHtml}
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>`;
+  }
+
+  function triggerTableRender() {
+    if (!currentTab) {
+      if (!activeFilters) {
+        showNoTab();
+        return;
+      }
+      if (allBeneficiaries.length === 0 || allFarmPlots.length === 0) {
+        loadAllAndRenderConsolidatedTable();
+      } else {
+        renderConsolidatedTable();
+      }
+      return;
+    }
+
     switch (currentTab) {
       case 'Beneficiary List':
         renderBeneficiaryTable(allBeneficiaries);
@@ -795,6 +1146,27 @@
         renderRecentActivitiesTable(allRecentActivities);
         break;
     }
+  }
+
+  // ── Event Listeners ───────────────────────────────────────────────────────
+
+  document.addEventListener('tableTabChanged', (e) => {
+    handleTabChange(e.detail.tab);
+  });
+
+  document.addEventListener('tableSearchChanged', (e) => {
+    searchQuery = e.detail.query || '';
+    triggerTableRender();
+  });
+
+  document.addEventListener('tableFiltersApplied', (e) => {
+    activeFilters = e.detail.filters;
+    triggerTableRender();
+  });
+
+  document.addEventListener('tableFiltersReset', () => {
+    activeFilters = null;
+    triggerTableRender();
   });
 
   // Re-render on navigation back to reports
@@ -807,7 +1179,19 @@
       allCropStatusList = [];
       allRecentActivities = [];
       searchQuery = '';
+      activeFilters = null;
       showNoTab();
+      
+      // Reset filter state
+      const filterSectionWrapper = document.getElementById('filterSectionWrapper');
+      if (filterSectionWrapper && typeof resetFilters === 'function') {
+        resetFilters();
+      }
+      const filterContainer = document.getElementById('reportsFilterSectionContainer');
+      if (filterContainer) {
+        filterContainer.style.display = 'none';
+      }
+      
       // Reset tab buttons
       document.querySelectorAll('.table-tab-button').forEach(b => b.classList.remove('active'));
     }
