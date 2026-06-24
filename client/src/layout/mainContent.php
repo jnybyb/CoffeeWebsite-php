@@ -19,6 +19,11 @@
   <section class="page-section" data-page="reports">
     <?php include '../pages/Reports.php'; ?>
   </section>
+
+  <!-- PDF Editor Page -->
+  <section class="page-section" data-page="pdf-editor">
+    <?php include '../pages/PDFEditor.php'; ?>
+  </section>
 </main>
 
 <style>

@@ -218,11 +218,11 @@ $tabs = ['Beneficiary List', 'Farm Location', 'Seedling Record', 'Crop Survey St
       <!-- Export Dropdown Menu -->
       <div class="table-tabs-export-dropdown" id="ttExportDropdown">
         <button class="table-tabs-dropdown-item" onclick="handleExport('excel')">
-          <svg class="tt-icon-lg" style="color: #107C41;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path fill="currentColor" d="M64 0C28.7 0 0 28.7 0 64V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64zM256 0V128H384L256 0zM155.7 250.2L192 302.5l36.3-52.3c7.6-10.9 22.8-13.6 33.7-6s13.6 22.8 6 33.7l-55.3 79.7 55.3 79.7c7.6 10.9 4.9 26.1-6 33.7s-26.1 4.9-33.7-6L192 412.8l-36.3 52.3c-7.6 10.9-22.8 13.6-33.7 6s-13.6-22.8-6-33.7l55.3-79.7-55.3-79.7c-7.6-10.9-4.9-26.1 6-33.7s26.1-4.9 33.7 6z"/></svg>
+          <img src="../../assets/icons/excel.png" alt="Excel" style="width: 14px; height: 14px; object-fit: contain;" />
           <span>Export as Excel</span>
         </button>
         <button class="table-tabs-dropdown-item" onclick="handleExport('pdf')">
-          <svg class="tt-icon-lg" style="color: #DC3545;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M64 464l48 0 0 48-48 0c-35.3 0-64-28.7-64-64L0 64C0 28.7 28.7 0 64 0L229.5 0c17 0 33.3 6.7 45.3 18.7l90.5 90.5c12 12 18.7 28.3 18.7 45.3L384 304l-48 0 0-144-80 0c-17.7 0-32-14.3-32-32l0-80L64 48c-8.8 0-16 7.2-16 16l0 384c0 8.8 7.2 16 16 16zM176 352h32c30.9 0 56 25.1 56 56s-25.1 56-56 56H192v32c0 8.8-7.2 16-16 16s-16-7.2-16-16V352zm32 80c13.3 0 24-10.7 24-24s-10.7-24-24-24H192v48h16zm96-80h32c26.5 0 48 21.5 48 48v64c0 26.5-21.5 48-48 48H304c-8.8 0-16-7.2-16-16V352zm32 128c8.8 0 16-7.2 16-16V400c0-8.8-7.2-16-16-16H320v96h16zm80-112c0-8.8 7.2-16 16-16h48c8.8 0 16 7.2 16 16s-7.2 16-16 16H448v32h32c8.8 0 16 7.2 16 16s-7.2 16-16 16H448v48c0 8.8-7.2 16-16 16s-16-7.2-16-16V368zM256 0v128h128L256 0z"/></svg>
+          <img src="../../assets/icons/pdf.png" alt="PDF" style="width: 14px; height: 14px; object-fit: contain;" />
           <span>Export as PDF</span>
         </button>
       </div>
@@ -291,8 +291,13 @@ $tabs = ['Beneficiary List', 'Farm Location', 'Seedling Record', 'Crop Survey St
     dropdown.classList.remove('show');
     document.getElementById('ttExportArrow').style.transform = 'rotate(0deg)';
     
-    // Dispatch event
-    document.dispatchEvent(new CustomEvent('tableExportTriggered', { detail: { type: type } }));
+    // Call directly to preserve browser trusted user gesture context (avoids download permission prompt)
+    if (typeof window.triggerReportExport === 'function') {
+      window.triggerReportExport(type);
+    } else {
+      // Fallback via event
+      document.dispatchEvent(new CustomEvent('tableExportTriggered', { detail: { type: type } }));
+    }
   }
 
   // Close dropdown when clicking outside

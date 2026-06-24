@@ -1196,5 +1196,618 @@
       document.querySelectorAll('.table-tab-button').forEach(b => b.classList.remove('active'));
     }
   });
+
+  // ── Excel/CSV Export Utility ─────────────────────────────────────────────
+
+  function getCurrentFilteredData() {
+    const query = searchQuery.toLowerCase().trim();
+    
+    if (!currentTab) {
+      // Consolidated Report
+      const consolidatedList = [];
+      const benMap = {};
+      allBeneficiaries.forEach(b => { benMap[b.beneficiaryId] = b; });
+      const benWithPlots = new Set();
+      
+      allFarmPlots.forEach(plot => {
+        const b = benMap[plot.beneficiaryId] || {};
+        benWithPlots.add(plot.beneficiaryId);
+        const plotSeedlings = allSeedlings.filter(s => s.plotId === plot.id);
+        const plotCrops = allCropStatusList.filter(c => c.plotId === plot.id);
+        const totalReceived = plotSeedlings.reduce((sum, s) => sum + parseInt(s.received || 0), 0);
+        const totalPlanted = plotSeedlings.reduce((sum, s) => sum + parseInt(s.planted || 0), 0);
+        const totalAlive = plotCrops.reduce((sum, c) => sum + parseInt(c.aliveCrops || 0), 0);
+        const totalDead = plotCrops.reduce((sum, c) => sum + parseInt(c.deadCrops || 0), 0);
+        const rawAddr = (plot.address || '').split(',').map(s => s.trim());
+        const cleanPlotAddr = rawAddr.filter(s => s && s.toLowerCase() !== 'unknown').join(', ');
+        const fullName = b.firstName ? `${b.firstName} ${b.middleName ? b.middleName + ' ' : ''}${b.lastName}` : (plot.beneficiaryName || '');
+        const benAddr = [b.purok, b.barangay, b.municipality, b.province].filter(p => p && p.trim() !== '').join(', ');
+
+        consolidatedList.push({
+          ben_id: b.beneficiaryId || plot.beneficiaryId || null,
+          ben_fullname: fullName || null,
+          ben_gender: b.gender || null,
+          ben_marital: b.maritalStatus || null,
+          ben_birthdate: b.birthDate || null,
+          ben_age: b.age || null,
+          ben_cellphone: b.cellphone || null,
+          ben_address: benAddr || null,
+          farm_plot_id: plot.id || null,
+          farm_beneficiary: plot.beneficiaryName || fullName || null,
+          farm_hectares: plot.hectares || null,
+          farm_address: cleanPlotAddr || benAddr || null,
+          farm_coordinates: plot.coordinates || null,
+          seed_id: plotSeedlings.length > 0 ? plotSeedlings[0].id : null,
+          seed_ben_id: plotSeedlings.length > 0 ? plotSeedlings[0].beneficiaryId : null,
+          seed_received: totalReceived || null,
+          seed_date_received: plotSeedlings.length > 0 ? plotSeedlings[0].dateReceived : null,
+          seed_planted: totalPlanted || null,
+          seed_plot_id: plotSeedlings.length > 0 ? plotSeedlings[0].plotId : null,
+          seed_planting_date: plotSeedlings.length > 0 ? plotSeedlings[0].dateOfPlantingStart : null,
+          crop_id: plotCrops.length > 0 ? plotCrops[0].id : null,
+          crop_ben_id: plotCrops.length > 0 ? plotCrops[0].beneficiaryId : null,
+          crop_beneficiary: plotCrops.length > 0 ? plotCrops[0].beneficiaryName : null,
+          crop_survey_date: plotCrops.length > 0 ? plotCrops[0].surveyDate : null,
+          crop_surveyer: plotCrops.length > 0 ? plotCrops[0].surveyer : null,
+          crop_alive: totalAlive || null,
+          crop_dead: totalDead || null,
+          crop_plot: plotCrops.length > 0 ? plotCrops[0].plotId : null
+        });
+      });
+
+      allBeneficiaries.forEach(b => {
+        if (benWithPlots.has(b.beneficiaryId)) return;
+        const fullName = `${b.firstName || ''} ${b.middleName ? b.middleName + ' ' : ''}${b.lastName || ''}`.replace(/\s+/g, ' ').trim();
+        const benAddr = [b.purok, b.barangay, b.municipality, b.province].filter(p => p && p.trim() !== '').join(', ');
+        consolidatedList.push({
+          ben_id: b.beneficiaryId || null,
+          ben_fullname: fullName || null,
+          ben_gender: b.gender || null,
+          ben_marital: b.maritalStatus || null,
+          ben_birthdate: b.birthDate || null,
+          ben_age: b.age || null,
+          ben_cellphone: b.cellphone || null,
+          ben_address: benAddr || null,
+          farm_plot_id: null,
+          farm_beneficiary: null,
+          farm_hectares: null,
+          farm_address: null,
+          farm_coordinates: null,
+          seed_id: null,
+          seed_ben_id: null,
+          seed_received: null,
+          seed_date_received: null,
+          seed_planted: null,
+          seed_plot_id: null,
+          seed_planting_date: null,
+          crop_id: null,
+          crop_ben_id: null,
+          crop_beneficiary: null,
+          crop_survey_date: null,
+          crop_surveyer: null,
+          crop_alive: null,
+          crop_dead: null,
+          crop_plot: null
+        });
+      });
+
+      let filtered = consolidatedList;
+      if (query) {
+        filtered = filtered.filter(item => 
+          (item.ben_id || '').toLowerCase().includes(query) ||
+          (item.ben_fullname || '').toLowerCase().includes(query) ||
+          (item.farm_plot_id || '').toLowerCase().includes(query) ||
+          (item.farm_address || '').toLowerCase().includes(query)
+        );
+      }
+      if (activeFilters) {
+        if (activeFilters.selectedProvince) {
+          filtered = filtered.filter(item => 
+            (item.ben_address && item.ben_address.toLowerCase().includes(activeFilters.selectedProvince.toLowerCase())) ||
+            (item.farm_address && item.farm_address.toLowerCase().includes(activeFilters.selectedProvince.toLowerCase()))
+          );
+        }
+        if (activeFilters.selectedMunicipality) {
+          filtered = filtered.filter(item => 
+            (item.ben_address && item.ben_address.toLowerCase().includes(activeFilters.selectedMunicipality.toLowerCase())) ||
+            (item.farm_address && item.farm_address.toLowerCase().includes(activeFilters.selectedMunicipality.toLowerCase()))
+          );
+        }
+      }
+      return filtered;
+    }
+
+    if (currentTab === 'Beneficiary List') {
+      let filtered = allBeneficiaries;
+      if (query) {
+        filtered = filtered.filter(b => {
+          const fullName = `${b.firstName || ''} ${b.middleName || ''} ${b.lastName || ''}`.toLowerCase();
+          const address = [b.purok, b.barangay, b.municipality, b.province].filter(p => p).join(', ').toLowerCase();
+          return (
+            (b.beneficiaryId || '').toLowerCase().includes(query) ||
+            fullName.includes(query) ||
+            (b.cellphone || '').toLowerCase().includes(query) ||
+            address.includes(query)
+          );
+        });
+      }
+      if (activeFilters) {
+        if (activeFilters.selectedGender) filtered = filtered.filter(b => b.gender === activeFilters.selectedGender);
+        if (activeFilters.selectedMaritalStatus) filtered = filtered.filter(b => b.maritalStatus === activeFilters.selectedMaritalStatus);
+        if (activeFilters.dateFrom) {
+          const fromDate = new Date(activeFilters.dateFrom);
+          filtered = filtered.filter(b => b.birthDate && new Date(b.birthDate) >= fromDate);
+        }
+        if (activeFilters.dateTo) {
+          const toDate = new Date(activeFilters.dateTo);
+          toDate.setHours(23, 59, 59, 999);
+          filtered = filtered.filter(b => b.birthDate && new Date(b.birthDate) <= toDate);
+        }
+        if (activeFilters.selectedProvince) filtered = filtered.filter(b => b.province === activeFilters.selectedProvince);
+        if (activeFilters.selectedMunicipality) filtered = filtered.filter(b => b.municipality === activeFilters.selectedMunicipality);
+      }
+      return filtered;
+    }
+
+    if (currentTab === 'Farm Location') {
+      let filtered = allFarmPlots;
+      if (query) {
+        filtered = filtered.filter(p =>
+          (p.id || '').toLowerCase().includes(query) ||
+          (p.beneficiaryName || '').toLowerCase().includes(query) ||
+          (p.address || '').toLowerCase().includes(query) ||
+          (p.beneficiaryId || '').toLowerCase().includes(query)
+        );
+      }
+      if (activeFilters) {
+        if (activeFilters.hectaresMin) {
+          const minH = parseFloat(activeFilters.hectaresMin);
+          filtered = filtered.filter(p => p.hectares != null && parseFloat(p.hectares) >= minH);
+        }
+        if (activeFilters.hectaresMax) {
+          const maxH = parseFloat(activeFilters.hectaresMax);
+          filtered = filtered.filter(p => p.hectares != null && parseFloat(p.hectares) <= maxH);
+        }
+        if (activeFilters.selectedProvince) {
+          filtered = filtered.filter(p => p.address && p.address.toLowerCase().includes(activeFilters.selectedProvince.toLowerCase()));
+        }
+        if (activeFilters.selectedMunicipality) {
+          filtered = filtered.filter(p => p.address && p.address.toLowerCase().includes(activeFilters.selectedMunicipality.toLowerCase()));
+        }
+      }
+      return filtered;
+    }
+
+    if (currentTab === 'Seedling Record') {
+      let filtered = allSeedlings;
+      if (query) {
+        filtered = filtered.filter(s =>
+          (s.beneficiaryId || '').toLowerCase().includes(query) ||
+          (s.plotId || '').toLowerCase().includes(query)
+        );
+      }
+      if (activeFilters) {
+        if (activeFilters.dateFrom) {
+          const fromDate = new Date(activeFilters.dateFrom);
+          filtered = filtered.filter(s => s.dateReceived && new Date(s.dateReceived) >= fromDate);
+        }
+        if (activeFilters.dateTo) {
+          const toDate = new Date(activeFilters.dateTo);
+          toDate.setHours(23, 59, 59, 999);
+          filtered = filtered.filter(s => s.dateReceived && new Date(s.dateReceived) <= toDate);
+        }
+      }
+      return filtered;
+    }
+
+    if (currentTab === 'Crop Survey Status') {
+      let filtered = allCropStatusList;
+      if (query) {
+        filtered = filtered.filter(c =>
+          (c.beneficiaryId || '').toLowerCase().includes(query) ||
+          (c.beneficiaryName || '').toLowerCase().includes(query) ||
+          (c.surveyer || '').toLowerCase().includes(query) ||
+          (c.plotId || '').toLowerCase().includes(query)
+        );
+      }
+      if (activeFilters) {
+        if (activeFilters.dateFrom) {
+          const fromDate = new Date(activeFilters.dateFrom);
+          filtered = filtered.filter(c => c.surveyDate && new Date(c.surveyDate) >= fromDate);
+        }
+        if (activeFilters.dateTo) {
+          const toDate = new Date(activeFilters.dateTo);
+          toDate.setHours(23, 59, 59, 999);
+          filtered = filtered.filter(c => c.surveyDate && new Date(c.surveyDate) <= toDate);
+        }
+      }
+      return filtered;
+    }
+
+    if (currentTab === 'Recent Activities') {
+      let filtered = allRecentActivities;
+      if (query) {
+        filtered = filtered.filter(a =>
+          (a.type || '').toLowerCase().includes(query) ||
+          (a.action || '').toLowerCase().includes(query) ||
+          (a.user || '').toLowerCase().includes(query)
+        );
+      }
+      if (activeFilters) {
+        if (activeFilters.dateFrom) {
+          const fromDate = new Date(activeFilters.dateFrom);
+          filtered = filtered.filter(a => a.timestamp && new Date(a.timestamp) >= fromDate);
+        }
+        if (activeFilters.dateTo) {
+          const toDate = new Date(activeFilters.dateTo);
+          toDate.setHours(23, 59, 59, 999);
+          filtered = filtered.filter(a => a.timestamp && new Date(a.timestamp) <= toDate);
+        }
+      }
+      return filtered;
+    }
+
+    return [];
+  }
+
+  const getCellValueByAttribute = (item, attrId) => {
+    if (item[attrId] !== undefined) {
+      if (attrId === 'ben_birthdate' || attrId === 'seed_date_received' || attrId === 'seed_planting_date' || attrId === 'crop_survey_date') {
+        const val = item[attrId];
+        if (!val) return '';
+        const date = new Date(val);
+        return isNaN(date.getTime()) ? val : date.toLocaleDateString();
+      }
+      if (attrId === 'act_timestamp') {
+        const val = item[attrId];
+        if (!val) return '';
+        const date = new Date(val);
+        return isNaN(date.getTime()) ? val : date.toLocaleString();
+      }
+      if (attrId === 'farm_coordinates') {
+        return Array.isArray(item.farm_coordinates) && item.farm_coordinates.length > 0
+          ? `${item.farm_coordinates.length} points`
+          : '';
+      }
+      return item[attrId] !== null && item[attrId] !== '' ? item[attrId] : '';
+    }
+
+    switch (attrId) {
+      case 'ben_id':
+        return item.beneficiaryId || '';
+      case 'ben_fullname':
+        return `${item.firstName || ''} ${item.middleName || ''} ${item.lastName || ''}`.trim() || '';
+      case 'ben_gender':
+        return item.gender || '';
+      case 'ben_birthdate':
+        return item.birthDate ? new Date(item.birthDate).toLocaleDateString() : '';
+      case 'ben_age':
+        return item.age || '';
+      case 'ben_cellphone':
+        return item.cellphone || '';
+      case 'ben_address':
+        const benAddress = [item.purok, item.barangay, item.municipality, item.province]
+          .filter(part => part && part.trim() !== '' && part.toLowerCase() !== 'unknown')
+          .join(', ');
+        return benAddress || '';
+      case 'ben_marital':
+        return item.maritalStatus || '';
+      
+      case 'farm_plot_id':
+        return item.id || '';
+      case 'farm_beneficiary':
+        return item.beneficiaryName || '';
+      case 'farm_hectares':
+        return item.hectares || '';
+      case 'farm_address':
+        return item.address || '';
+      case 'farm_coordinates':
+        return `${item.coordinates?.length || 0} points`;
+      
+      case 'seed_id':
+        return item.id || '';
+      case 'seed_ben_id':
+        return item.beneficiaryId || '';
+      case 'seed_received':
+        return item.received || '';
+      case 'seed_date_received':
+        return item.dateReceived ? new Date(item.dateReceived).toLocaleDateString() : '';
+      case 'seed_planted':
+        return item.planted || '';
+      case 'seed_plot_id':
+        return item.plotId || '';
+      case 'seed_planting_date':
+        return item.dateOfPlantingStart ? new Date(item.dateOfPlantingStart).toLocaleDateString() : '';
+      
+      case 'crop_id':
+        return item.id || '';
+      case 'crop_ben_id':
+        return item.beneficiaryId || '';
+      case 'crop_beneficiary':
+        return item.beneficiaryName || '';
+      case 'crop_survey_date':
+        return item.surveyDate ? new Date(item.surveyDate).toLocaleDateString() : '';
+      case 'crop_surveyer':
+        return item.surveyer || '';
+      case 'crop_alive':
+        return item.aliveCrops || '';
+      case 'crop_dead':
+        return item.deadCrops || '';
+      case 'crop_plot':
+        return item.plotId || item.plot || '';
+      
+      case 'act_id':
+        return item.id || '';
+      case 'act_type':
+        const typeMeta = {
+          beneficiary: 'Coffee Beneficiary',
+          crop: 'Crop Survey Status',
+          seedling: 'Seedling Record',
+          plot: 'Farm Plot Details'
+        };
+        return typeMeta[item.type] || item.type || 'System Activity';
+      case 'act_action':
+        return item.action || '';
+      case 'act_timestamp':
+        return item.timestamp ? new Date(item.timestamp).toLocaleString() : '';
+      case 'act_user':
+        return item.user || '';
+      
+      default:
+        return '';
+    }
+  };
+
+  const convertToCSVRow = (item, activeTab, selectedAttributes, attributeColumnMap) => {
+    if (selectedAttributes && selectedAttributes.length > 0) {
+      return selectedAttributes.map(attrId => getCellValueByAttribute(item, attrId));
+    }
+    
+    let row = [];
+    switch (activeTab) {
+      case 'Beneficiary List':
+        const address = [item.purok, item.barangay, item.municipality, item.province]
+          .filter(part => part && part.trim() !== '')
+          .join(', ');
+        row = [
+          item.beneficiaryId || '',
+          `${item.firstName || ''} ${item.middleName || ''} ${item.lastName || ''}`.trim() || '',
+          item.gender || '',
+          item.maritalStatus || '',
+          item.birthDate ? new Date(item.birthDate).toLocaleDateString() : '',
+          item.age || '',
+          item.cellphone || '',
+          address || ''
+        ];
+        break;
+      case 'Farm Location':
+        row = [
+          item.id || '',
+          item.beneficiaryName || '',
+          item.hectares || '',
+          item.address || '',
+          `${item.coordinates?.length || 0} points`
+        ];
+        break;
+      case 'Seedling Record':
+        row = [
+          item.beneficiaryId || '',
+          item.received || '',
+          item.dateReceived ? new Date(item.dateReceived).toLocaleDateString() : '',
+          item.planted || '',
+          item.plotId || '',
+          item.dateOfPlantingStart ? new Date(item.dateOfPlantingStart).toLocaleDateString() : '',
+          item.dateOfPlantingEnd ? new Date(item.dateOfPlantingEnd).toLocaleDateString() : ''
+        ];
+        break;
+      case 'Crop Survey Status':
+        row = [
+          item.beneficiaryId || '',
+          item.beneficiaryName || '',
+          item.surveyDate ? new Date(item.surveyDate).toLocaleDateString() : '',
+          item.surveyer || '',
+          item.aliveCrops || '',
+          item.deadCrops || '',
+          item.plot || ''
+        ];
+        break;
+      case 'Recent Activities':
+        const typeMeta = {
+          beneficiary: 'Coffee Beneficiary',
+          crop: 'Crop Survey Status',
+          seedling: 'Seedling Record',
+          plot: 'Farm Plot Details'
+        };
+        row = [
+          typeMeta[item.type] || item.type || 'System Activity',
+          item.action || '',
+          item.timestamp ? new Date(item.timestamp).toLocaleString() : '',
+          item.user || ''
+        ];
+        break;
+      default:
+        // Consolidated list defaults
+        row = [
+          item.ben_id || '',
+          item.ben_fullname || '',
+          item.farm_plot_id || '',
+          item.farm_hectares || '',
+          item.seed_received || '',
+          item.seed_planted || '',
+          item.crop_alive || '',
+          item.crop_dead || ''
+        ];
+    }
+    return row;
+  };
+
+  function exportToExcel(activeTab, data, selectedAttributes = null) {
+    if (!data || data.length === 0) return;
+    
+    const attributeColumnMap = {
+      // Beneficiary List
+      'ben_id': { header: 'Beneficiary ID' },
+      'ben_fullname': { header: 'Full Name' },
+      'ben_gender': { header: 'Gender' },
+      'ben_marital': { header: 'Marital Status' },
+      'ben_birthdate': { header: 'Birth Date' },
+      'ben_age': { header: 'Age' },
+      'ben_cellphone': { header: 'Cellphone' },
+      'ben_address': { header: 'Address' },
+
+      // Farm Location
+      'farm_plot_id': { header: 'Plot ID' },
+      'farm_beneficiary': { header: 'Beneficiary' },
+      'farm_hectares': { header: 'Hectares' },
+      'farm_address': { header: 'Address' },
+      'farm_coordinates': { header: 'Coordinates' },
+
+      // Seedling Record
+      'seed_id': { header: 'Seedling ID' },
+      'seed_ben_id': { header: 'Beneficiary ID' },
+      'seed_received': { header: 'Received' },
+      'seed_date_received': { header: 'Date Received' },
+      'seed_planted': { header: 'Planted' },
+      'seed_plot_id': { header: 'Plot ID' },
+      'seed_planting_date': { header: 'Planting Date' },
+
+      // Crop Survey Status
+      'crop_id': { header: 'Survey ID' },
+      'crop_ben_id': { header: 'Beneficiary ID' },
+      'crop_beneficiary': { header: 'Beneficiary Name' },
+      'crop_survey_date': { header: 'Survey Date' },
+      'crop_surveyer': { header: 'Surveyer Name' },
+      'crop_alive': { header: 'Alive Crops' },
+      'crop_dead': { header: 'Dead Crops' },
+      'crop_plot': { header: 'Plot' },
+
+      // Recent Activities
+      'act_id': { header: 'Activity ID' },
+      'act_type': { header: 'Type' },
+      'act_action': { header: 'Action' },
+      'act_timestamp': { header: 'Timestamp' },
+      'act_user': { header: 'User' }
+    };
+
+    let headers = [];
+    if (selectedAttributes && selectedAttributes.length > 0) {
+      headers = ['#', ...selectedAttributes.map(attrId => attributeColumnMap[attrId]?.header).filter(Boolean)];
+    } else {
+      const headersMap = {
+        'Beneficiary List': ['Beneficiary ID', 'Full Name', 'Gender', 'Marital Status', 'Birth Date', 'Age', 'Cellphone', 'Address'],
+        'Farm Location': ['Plot ID', 'Beneficiary', 'Hectares', 'Address', 'Coordinates'],
+        'Seedling Record': ['Beneficiary ID', 'Received', 'Date Received', 'Planted', 'Plot ID', 'Planting Date', 'End Date'],
+        'Crop Survey Status': ['Beneficiary ID', 'Beneficiary Name', 'Survey Date', 'Surveyer Name', 'Alive Crops', 'Dead Crops', 'Plot'],
+        'Recent Activities': ['Type', 'Action', 'Timestamp', 'User']
+      };
+      
+      const defaultTab = activeTab || 'Consolidated Report';
+      headers = ['#', ...(headersMap[defaultTab] || ['Beneficiary ID', 'Full Name', 'Plot ID', 'Hectares', 'Received', 'Planted', 'Alive Crops', 'Dead Crops'])];
+    }
+
+    const csvRows = [
+      headers.join(','),
+      ...data.map((item, index) => {
+        let rowData;
+        if (selectedAttributes && selectedAttributes.length > 0) {
+          rowData = [index + 1, ...convertToCSVRow(item, activeTab, selectedAttributes, attributeColumnMap)];
+        } else {
+          rowData = [index + 1, ...convertToCSVRow(item, activeTab, null, null)];
+        }
+        
+        return rowData.map(cell => {
+          const cellStr = String(cell === null || cell === undefined || cell === '—' ? '' : cell);
+          if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+            return `"${cellStr.replace(/"/g, '""')}"`;
+          }
+          return cellStr;
+        }).join(',');
+      })
+    ];
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    
+    const filename = `${(activeTab || 'Consolidated_Report').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  const attributeColumnMap = {
+    ben_id: { header: 'Beneficiary ID' },
+    ben_fullname: { header: 'Full Name' },
+    ben_gender: { header: 'Gender' },
+    ben_marital: { header: 'Marital Status' },
+    ben_birthdate: { header: 'Birth Date' },
+    ben_age: { header: 'Age' },
+    ben_cellphone: { header: 'Cellphone' },
+    ben_address: { header: 'Address' },
+    
+    farm_plot_id: { header: 'Plot ID' },
+    farm_beneficiary: { header: 'Beneficiary Name' },
+    farm_hectares: { header: 'Hectares' },
+    farm_address: { header: 'Plot Address' },
+    farm_coordinates: { header: 'Coordinates' },
+    
+    seed_id: { header: 'Seedling ID' },
+    seed_ben_id: { header: 'Seedling Ben ID' },
+    seed_received: { header: 'Received' },
+    seed_date_received: { header: 'Date Received' },
+    seed_planted: { header: 'Planted' },
+    seed_plot_id: { header: 'Seedling Plot ID' },
+    seed_planting_date: { header: 'Planting Date' },
+    
+    crop_id: { header: 'Survey ID' },
+    crop_ben_id: { header: 'Survey Ben ID' },
+    crop_beneficiary: { header: 'Survey Beneficiary' },
+    crop_survey_date: { header: 'Survey Date' },
+    crop_surveyer: { header: 'Surveyer' },
+    crop_alive: { header: 'Alive Crops' },
+    crop_dead: { header: 'Dead Crops' },
+    crop_plot: { header: 'Survey Plot' },
+    
+    act_id: { header: 'Activity ID' },
+    act_type: { header: 'Activity Type' },
+    act_action: { header: 'Action' },
+    act_timestamp: { header: 'Timestamp' },
+    act_user: { header: 'User' }
+  };
+
+  document.addEventListener('tableExportTriggered', (e) => {
+    if (e.detail.type === 'excel') {
+      const dataToExport = getCurrentFilteredData();
+      const selectedAttrs = activeFilters ? activeFilters.selectedAttributes : null;
+      exportToExcel(currentTab, dataToExport, selectedAttrs);
+    } else if (e.detail.type === 'pdf') {
+      const dataToExport = getCurrentFilteredData();
+      const selectedAttrs = activeFilters ? activeFilters.selectedAttributes : null;
+      if (typeof window.openPDFEditor === 'function') {
+        window.openPDFEditor(currentTab, dataToExport, selectedAttrs, attributeColumnMap);
+      }
+    }
+  });
+
+  // Exposed globally so ReportTableTabs can call it directly within the user
+  // gesture context (avoids browser download permission prompt on localhost)
+  window.triggerReportExport = function(type) {
+    if (type === 'excel') {
+      const dataToExport = getCurrentFilteredData();
+      const selectedAttrs = activeFilters ? activeFilters.selectedAttributes : null;
+      exportToExcel(currentTab, dataToExport, selectedAttrs);
+    } else if (type === 'pdf') {
+      const dataToExport = getCurrentFilteredData();
+      const selectedAttrs = activeFilters ? activeFilters.selectedAttributes : null;
+      if (typeof window.openPDFEditor === 'function') {
+        window.openPDFEditor(currentTab, dataToExport, selectedAttrs, attributeColumnMap);
+      }
+    }
+  };
 })();
 </script>
